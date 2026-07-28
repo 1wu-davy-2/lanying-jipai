@@ -1,0 +1,33 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
+load_dotenv(ENV_FILE, override=False)
+
+
+def uploads_directory() -> Path:
+    configured = Path(os.getenv("UPLOADS_DIR", "uploads")).expanduser()
+    return configured if configured.is_absolute() else PROJECT_ROOT / configured
+
+
+class Settings(BaseSettings):
+    """Runtime configuration supplied by the process environment."""
+
+    app_name: str = "Lanying Jipai API"
+    app_env: str = "development"
+    database_url: str
+    jwt_secret_key: str
+    aes_key: str
+    access_token_minutes: int = 30
+    refresh_token_days: int = 7
+    uploads_dir: str = "uploads"
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
