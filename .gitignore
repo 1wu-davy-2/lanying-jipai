@@ -8,6 +8,7 @@ __pycache__/
 .pytest_cache/
 backend/.venv/
 backend/uploads/
+backend/local-debug.db
 
 # Frontend dependencies and builds
 frontend/node_modules/

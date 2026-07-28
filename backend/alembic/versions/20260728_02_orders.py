@@ -10,6 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
+SQLITE_BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
+
 revision: str = "20260728_02"
 down_revision: str | None = "20260728_01"
 branch_labels: str | Sequence[str] | None = None
@@ -29,10 +31,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "orders",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("order_no", sa.String(length=32), nullable=False),
-        sa.Column("merchant_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("model_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("merchant_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("model_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=True),
         sa.Column("title", sa.String(length=100), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("sample_images", sa.Text(), nullable=True),
@@ -63,9 +65,9 @@ def upgrade() -> None:
     op.create_index("idx_orders_model_id", "orders", ["model_id"])
     op.create_table(
         "order_logs",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("order_id", sa.BigInteger(), sa.ForeignKey("orders.id"), nullable=False),
-        sa.Column("operator_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
+        sa.Column("order_id", SQLITE_BIGINT, sa.ForeignKey("orders.id"), nullable=False),
+        sa.Column("operator_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("from_status", sa.String(length=30), nullable=True),
         sa.Column("to_status", sa.String(length=30), nullable=False),
         sa.Column("remark", sa.String(length=255), nullable=True),
@@ -77,9 +79,9 @@ def upgrade() -> None:
     op.create_index("idx_order_logs_order_id", "order_logs", ["order_id"])
     op.create_table(
         "order_messages",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("order_id", sa.BigInteger(), sa.ForeignKey("orders.id"), nullable=False),
-        sa.Column("sender_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
+        sa.Column("order_id", SQLITE_BIGINT, sa.ForeignKey("orders.id"), nullable=False),
+        sa.Column("sender_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         mysql_engine="InnoDB",

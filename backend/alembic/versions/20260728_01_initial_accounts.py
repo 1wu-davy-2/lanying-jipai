@@ -10,6 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
+SQLITE_BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
+
 revision: str = "20260728_01"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
@@ -26,7 +28,7 @@ def timestamp_columns() -> list[sa.Column]:
 def upgrade() -> None:
     op.create_table(
         "users",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("phone", sa.String(length=20), nullable=False),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column("role", sa.Enum("merchant", "model", "admin", name="user_role"), nullable=False),
@@ -53,8 +55,8 @@ def upgrade() -> None:
     op.create_index("ix_users_role", "users", ["role"])
     op.create_table(
         "merchant_profiles",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("user_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
+        sa.Column("user_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("shop_name", sa.String(length=100), nullable=False, server_default=""),
         sa.Column("shop_platform", sa.String(length=50), nullable=True),
         sa.Column("contact_phone", sa.String(length=20), nullable=False, server_default=""),
@@ -67,8 +69,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "model_profiles",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("user_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
+        sa.Column("user_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("height_cm", sa.SmallInteger(), nullable=True),
         sa.Column("weight_kg", sa.SmallInteger(), nullable=True),
         sa.Column("shoe_size", sa.String(length=10), nullable=True),

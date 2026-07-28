@@ -10,6 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
+SQLITE_BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
+
 revision: str = "20260728_03"
 down_revision: str | None = "20260728_02"
 branch_labels: str | Sequence[str] | None = None
@@ -30,8 +32,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "wallets",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
-        sa.Column("user_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
+        sa.Column("user_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("available_balance", sa.Numeric(10, 2), nullable=False, server_default="0"),
         sa.Column("frozen_balance", sa.Numeric(10, 2), nullable=False, server_default="0"),
         *timestamp_columns(),
@@ -44,14 +46,14 @@ def upgrade() -> None:
     )
     op.create_table(
         "withdrawals",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("withdrawal_no", sa.String(length=32), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("user_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
         sa.Column("alipay_account", sa.String(length=255), nullable=False),
         sa.Column("alipay_real_name", sa.String(length=50), nullable=False),
         sa.Column("status", withdrawal_status, nullable=False, server_default="pending"),
-        sa.Column("reviewer_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("reviewer_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=True),
         sa.Column("reject_reason", sa.String(length=255), nullable=True),
         sa.Column("transfer_no", sa.String(length=100), nullable=True),
         sa.Column("transferred_at", sa.DateTime(), nullable=True),
@@ -68,15 +70,15 @@ def upgrade() -> None:
     op.create_index("idx_withdrawals_status_created", "withdrawals", ["status", "created_at"])
     op.create_table(
         "wallet_transactions",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("idempotency_key", sa.String(length=100), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("user_id", SQLITE_BIGINT, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("type", transaction_type, nullable=False),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
         sa.Column("balance_after", sa.Numeric(10, 2), nullable=False),
         sa.Column("frozen_balance_after", sa.Numeric(10, 2), nullable=False),
-        sa.Column("order_id", sa.BigInteger(), sa.ForeignKey("orders.id"), nullable=True),
-        sa.Column("withdrawal_id", sa.BigInteger(), sa.ForeignKey("withdrawals.id"), nullable=True),
+        sa.Column("order_id", SQLITE_BIGINT, sa.ForeignKey("orders.id"), nullable=True),
+        sa.Column("withdrawal_id", SQLITE_BIGINT, sa.ForeignKey("withdrawals.id"), nullable=True),
         sa.Column("remark", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.UniqueConstraint("idempotency_key", name="uq_wallet_transactions_idempotency_key"),
@@ -89,7 +91,7 @@ def upgrade() -> None:
     op.create_index("idx_wallet_transactions_withdrawal_id", "wallet_transactions", ["withdrawal_id"])
     op.create_table(
         "platform_configs",
-        sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("config_key", sa.String(length=50), nullable=False),
         sa.Column("config_value", sa.String(length=255), nullable=False),
         sa.Column("description", sa.String(length=255), nullable=True),
