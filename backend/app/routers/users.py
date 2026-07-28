@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +11,7 @@ from app.schemas.user import (
     UserUpdateRequest,
     VerifyRequest,
     VerifyReviewRequest,
+    UserStatusUpdateRequest,
 )
 from app.security import decrypt_sensitive, encrypt_sensitive, mask_id_card
 
@@ -17,7 +19,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 admin_router = APIRouter(prefix="/admin/users", tags=["admin users"])
 
 
-def serialize_user(user: User) -> dict[str, object]:
+def serialize_user(user: User, include_payment_details: bool = True) -> dict[str, object]:
     data: dict[str, object] = {
         "id": user.id,
         "phone": user.phone,
@@ -27,9 +29,10 @@ def serialize_user(user: User) -> dict[str, object]:
         "status": user.status,
         "real_name": user.real_name,
         "id_card_no": mask_id_card(decrypt_sensitive(user.id_card_no) if user.id_card_no else None),
-        "alipay_account": user.alipay_account,
-        "alipay_real_name": user.alipay_real_name,
+        "alipay_account": user.alipay_account if include_payment_details else None,
+        "alipay_real_name": user.alipay_real_name if include_payment_details else None,
         "verify_status": user.verify_status,
+        "verify_reject_reason": user.verify_reject_reason,
         "merchant_profile": None,
         "model_profile": None,
     }
@@ -123,6 +126,56 @@ def review_verification(
     user = session.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="用户不存在")
+    if not payload.approved and not payload.reason:
+        raise HTTPException(status_code=400, detail="驳回认证时必须填写原因")
     user.verify_status = "verified" if payload.approved else "rejected"
+    user.verify_reject_reason = None if payload.approved else payload.reason
     session.commit()
-    return {"code": 0, "message": "ok", "data": serialize_user(user)}
+    return {"code": 0, "message": "ok", "data": serialize_user(user, include_payment_details=False)}
+
+
+@admin_router.get("")
+def list_users(
+    role: str | None = None,
+    status_filter: str | None = Query(default=None, alias="status"),
+    verify_status: str | None = None,
+    keyword: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    statement = select(User)
+    count_statement = select(func.count()).select_from(User)
+    filters = []
+    if role:
+        filters.append(User.role == role)
+    if status_filter:
+        filters.append(User.status == status_filter)
+    if verify_status:
+        filters.append(User.verify_status == verify_status)
+    if keyword:
+        filters.append(or_(User.phone.contains(keyword), User.nickname.contains(keyword)))
+    if filters:
+        statement = statement.where(*filters)
+        count_statement = count_statement.where(*filters)
+    users = list(session.scalars(statement.order_by(User.created_at.desc(), User.id.desc()).offset((page - 1) * page_size).limit(page_size)))
+    total = session.scalar(count_statement) or 0
+    return {"code": 0, "message": "ok", "data": {"items": [serialize_user(item, include_payment_details=False) for item in users], "total": total, "page": page, "page_size": page_size}}
+
+
+@admin_router.put("/{user_id}/status")
+def update_user_status(
+    user_id: int,
+    payload: UserStatusUpdateRequest,
+    current_admin: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    if user.id == current_admin.id and payload.status == "disabled":
+        raise HTTPException(status_code=400, detail="不能禁用当前管理员账号")
+    user.status = payload.status
+    session.commit()
+    return {"code": 0, "message": "ok", "data": serialize_user(user, include_payment_details=False)}

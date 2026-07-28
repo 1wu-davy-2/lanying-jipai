@@ -145,9 +145,9 @@ FastAPI 自带 Swagger UI（`/docs`）和 ReDoc（`/redoc`），MVP 阶段直接
 
 ## 7. 本模块执行清单
 
-- [ ] 搭建 FastAPI 项目骨架（config/database/deps/security）
-- [ ] 实现 auth 模块（注册/登录/refresh），编写单测
-- [ ] 实现订单状态机 service 层 + 全部订单接口，编写状态跳转的单测（覆盖非法跳转应被拒绝）
-- [ ] 实现钱包/提现模块，编写并发提现的测试（防止超提）
-- [ ] 实现管理员模块（用户管理、争议仲裁、提现审核）
-- [ ] 生产环境关闭/加保护 `/docs`、`/redoc`
+- [x] 搭建 FastAPI 项目骨架（config/database/deps/security）
+- [x] 实现 auth 模块（注册/登录/refresh），编写单测
+- [x] 实现订单状态机 service 层 + 全部订单接口，编写状态跳转的单测（覆盖非法跳转应被拒绝）
+- [x] 实现钱包/提现模块，编写并发提现的测试（防止超提）
+- [x] 实现管理员模块（用户管理、争议仲裁、提现审核）
+- [x] 生产环境关闭 `/docs`、`/redoc`（`APP_ENV=production`）

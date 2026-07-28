@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -27,3 +29,8 @@ class RejectOrderRequest(BaseModel):
 
 class OrderMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=5000)
+
+
+class ArbitrationRequest(BaseModel):
+    winner: Literal["model", "merchant"]
+    remark: str = Field(min_length=1, max_length=255)

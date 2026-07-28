@@ -85,10 +85,10 @@ frontend/
 
 ## 5. 本模块执行清单
 
-- [ ] 搭建 Vite + React + TS 项目骨架，接入 Ant Design、React Router、TanStack Query、Zustand
-- [ ] 实现 axios 封装（token 注入、401 自动跳登录、统一错误提示）
-- [ ] 实现登录/注册页 + 角色守卫路由
-- [ ] 实现商家端三个页面
-- [ ] 实现达人端四个页面
-- [ ] 实现管理员端五个页面
-- [ ] 联调后端接口，处理边界情况（抢单失败提示、余额不足提示等）
+- [x] 搭建 Vite + React + TS 项目骨架，接入 Ant Design、React Router、TanStack Query、Zustand
+- [x] 实现 axios 封装（token 注入、401 自动跳登录、统一错误提示）
+- [x] 实现登录/注册页 + 角色守卫路由
+- [x] 实现商家端三个页面
+- [x] 实现达人端四个页面
+- [x] 实现管理员端五个页面
+- [x] 联调后端接口，处理边界情况（抢单失败提示、余额不足提示等）

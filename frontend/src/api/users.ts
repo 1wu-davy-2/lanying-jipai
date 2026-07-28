@@ -7,6 +7,8 @@ export interface UserProfile {
   role: UserRole;
   nickname: string;
   verify_status: string;
+  alipay_account?: string | null;
+  alipay_real_name?: string | null;
   merchant_profile?: {
     shop_name: string;
     shop_platform?: string | null;

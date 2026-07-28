@@ -49,3 +49,8 @@ class VerifyRequest(BaseModel):
 
 class VerifyReviewRequest(BaseModel):
     approved: bool
+    reason: str | None = Field(default=None, max_length=255)
+
+
+class UserStatusUpdateRequest(BaseModel):
+    status: Literal["active", "disabled"]

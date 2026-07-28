@@ -64,4 +64,28 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "我的订单" })).toBeInTheDocument();
   });
+
+  it("shows the wallet workspace for a model", () => {
+    useAuthStore.setState({
+      session: {
+        access_token: "token", refresh_token: "refresh", token_type: "bearer",
+        user: { id: 2, phone: "13800138001", role: "model", nickname: "达人" },
+      },
+    });
+    renderWithProviders("/model/wallet");
+
+    expect(screen.getByRole("heading", { name: "我的钱包" })).toBeInTheDocument();
+  });
+
+  it("shows the administrator dashboard", () => {
+    useAuthStore.setState({
+      session: {
+        access_token: "token", refresh_token: "refresh", token_type: "bearer",
+        user: { id: 3, phone: "13800138002", role: "admin", nickname: "管理员" },
+      },
+    });
+    renderWithProviders("/admin/dashboard");
+
+    expect(screen.getByRole("heading", { name: "运营看板" })).toBeInTheDocument();
+  });
 });

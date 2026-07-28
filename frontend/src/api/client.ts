@@ -23,7 +23,10 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) localStorage.removeItem("lanying-jipai-auth");
+    if (error.response?.status === 401) {
+      localStorage.removeItem("lanying-jipai-auth");
+      if (window.location.pathname !== "/login") window.location.assign("/login");
+    }
     return Promise.reject(error);
   },
 );

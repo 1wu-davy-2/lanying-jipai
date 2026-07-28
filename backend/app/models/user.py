@@ -30,6 +30,7 @@ class User(TimestampMixin, Base):
     alipay_account: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     alipay_real_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     verify_status: Mapped[str] = mapped_column(String(20), default="unverified", nullable=False)
+    verify_reject_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     merchant_profile: Mapped[Optional[MerchantProfile]] = relationship(
         back_populates="user", cascade="all, delete-orphan", uselist=False

@@ -174,7 +174,7 @@ users(达人,1) ──1:N── withdrawals ──1:N── wallet_transactions
 
 ## 6. 本模块执行清单
 
-- [ ] 在 `backend/app/models/` 下按上述表结构定义 SQLAlchemy ORM 模型
-- [ ] 配置 Alembic，生成初始迁移脚本
-- [ ] 编写 `id_card_no` 字段的应用层加解密工具函数（AES-256-GCM，密钥来自环境变量）
-- [ ] 编写种子数据脚本（至少 1 个管理员账号、若干测试商家/达人账号）供开发和演示使用
+- [x] 在 `backend/app/models/` 下按上述表结构定义 SQLAlchemy ORM 模型
+- [x] 配置 Alembic，生成迁移脚本
+- [x] 编写 `id_card_no` 字段的应用层加解密工具函数（AES-256-GCM，密钥来自环境变量）
+- [x] 编写种子数据脚本（至少 1 个管理员账号、若干测试商家/达人账号）供开发和演示使用

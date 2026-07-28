@@ -36,8 +36,8 @@ export interface OrderDetail extends OrderItem { logs: OrderLog[]; }
 
 interface OrderList { items: OrderItem[]; total: number; page?: number; page_size?: number; }
 
-export function getMyOrders(status?: OrderStatus) {
-  return request<OrderList>(client.get("/orders", { params: status ? { status_filter: status } : undefined }));
+export function getMyOrders(status?: OrderStatus, page = 1, pageSize = 20) {
+  return request<OrderList>(client.get("/orders", { params: { status_filter: status, page, page_size: pageSize } }));
 }
 export function getOrderHall() { return request<OrderList>(client.get("/orders/hall")); }
 export function getOrder(orderId: number) { return request<OrderDetail>(client.get(`/orders/${orderId}`)); }

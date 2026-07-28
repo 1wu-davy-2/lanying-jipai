@@ -31,7 +31,7 @@
 ## 4. 后端部署步骤
 
 1. 服务器创建部署用户（不用 root 跑服务），如 `deploy`。
-2. `git clone` 代码到 `/opt/lanying-jipai/backend`。
+2. `git clone` 代码到 `/opt/lanying-jipai`，后端目录为 `/opt/lanying-jipai/backend`。
 3. 创建虚拟环境并安装依赖：
    ```bash
    python3.11 -m venv venv
@@ -39,7 +39,7 @@
    ```
 4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。
 5. 执行数据库迁移：`./venv/bin/alembic upgrade head`。
-6. 配置 systemd 服务 `/etc/systemd/system/lanying-backend.service`：
+6. 复制仓库中的 `deploy/lanying-backend.service` 到 `/etc/systemd/system/lanying-backend.service`，确认 `User`、路径和虚拟环境名称与服务器一致：
    ```ini
    [Unit]
    Description=Lanying Jipai Backend
@@ -93,16 +93,12 @@ server {
         alias /opt/lanying-jipai/backend/uploads/;
     }
 
-    # 生产环境限制 API 文档访问，按需加 Basic Auth
-    location ~ ^/api/(docs|redoc|openapi.json) {
-        auth_basic "Restricted";
-        auth_basic_user_file /etc/nginx/.htpasswd;
-        proxy_pass http://127.0.0.1:8000;
-    }
+    # APP_ENV=production 时应用已禁用 /docs、/redoc 和 /openapi.json。
+    # Nginx 模板同时返回 404，形成双层保护。
 }
 ```
 
-后续用 `certbot --nginx` 一键升级到 443 HTTPS 并配置自动续期。**有公开对外服务但目前配置里 `/api/` 除鉴权接口外均要求 JWT，未鉴权路径仅限 `/api/auth/*` 和抢单大厅只读浏览（若产品要求大厅也需登录可见，直接去掉公开例外）——请确认这个默认是否符合预期。**
+后续用 `certbot --nginx` 一键升级到 443 HTTPS 并配置自动续期。除 `/api/health` 和 `/api/auth/*` 外，现有 API 均要求登录；抢单大厅也要求达人登录。
 
 ## 7. MariaDB 配置要点
 
@@ -134,16 +130,16 @@ MVP 阶段不强制上完整 CI/CD 流水线，先用最小手动/半自动流�
 
 1. 本地开发通过后，push 到 git 仓库（GitHub/Gitee/自建 Gitlab）。
 2. 服务器上 `git pull` + 后端 `alembic upgrade head` + `systemctl restart lanying-backend`；前端本地 build 后 `rsync` 上传替换 `frontend-dist`。
-3. 写一个 `deploy/deploy.sh` 脚本把上述步骤脚本化，减少手动出错。
+3. 使用仓库提供的 `deploy/deploy.sh` 脚本把上述步骤脚本化，减少手动出错。部署、备份和监控变量及 cron 示例见 [`deploy/README.md`](../deploy/README.md)。
 
 后续订单量/团队规模上来后，可以升级为 GitHub Actions 自动构建+部署，这里先不做，避免过度设计。
 
 ## 10. 本模块执行清单
 
-- [ ] 准备服务器（系统更新、创建 deploy 用户、安装 Python/Nginx/MariaDB/certbot）
-- [ ] 配置 MariaDB 专用账号和数据库
-- [ ] 编写并测试 `deploy/deploy.sh` 脚本
-- [ ] 配置 systemd 服务并验证开机自启、崩溃自动重启
-- [ ] 配置 Nginx + HTTPS
-- [ ] 配置数据库定时备份
-- [ ] 走一遍安全清单
+- [ ] 准备服务器（系统更新、创建 deploy 用户、安装 Python/Nginx/MariaDB/certbot）- 需在真实服务器执行
+- [ ] 配置 MariaDB 专用账号和数据库 - 需在真实 MariaDB 执行
+- [x] 编写 `deploy/deploy.sh` 脚本与部署模板
+- [x] 提供 systemd 服务模板；开机自启、崩溃自动重启需在真实服务器验证
+- [x] 提供 Nginx 模板；HTTPS 证书申请需绑定真实域名后执行
+- [x] 提供数据库定时备份与健康检查脚本、crontab 示例
+- [ ] 走一遍安全清单 - 需在生产环境逐项验收

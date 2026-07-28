@@ -1,0 +1,18 @@
+[Unit]
+Description=Lanying Jipai FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/lanying-jipai/backend
+EnvironmentFile=/opt/lanying-jipai/backend/.env
+ExecStart=/opt/lanying-jipai/backend/venv/bin/gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --workers 4 --bind 127.0.0.1:8000 --access-logfile - --error-logfile -
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

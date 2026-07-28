@@ -63,10 +63,15 @@ def _change_wallet(
     return wallet
 
 
-def complete_order_and_settle(session: Session, order: Order, operator_id: int) -> None:
+def complete_order_and_settle(
+    session: Session,
+    order: Order,
+    operator_id: int,
+    remark: str = "商家验收通过并完成佣金结算",
+) -> None:
     if order.model_id is None:
         raise WalletConflictError("订单未分配达人，无法结算")
-    transition_order(session, order, "COMPLETED", operator_id, "商家验收通过并完成佣金结算")
+    transition_order(session, order, "COMPLETED", operator_id, remark)
     wallet = _change_wallet(session, order.model_id, order.commission_amount, Decimal("0.00"))
     session.add(
         WalletTransaction(

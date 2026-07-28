@@ -1,8 +1,8 @@
 import json
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -109,14 +109,14 @@ def create_order(
 
 @router.get("/hall")
 def order_hall(
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(require_role("model")),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     statement = select(Order).where(Order.status == "PUBLISHED").order_by(Order.created_at.desc())
     orders = list(session.scalars(statement.offset((page - 1) * page_size).limit(page_size)))
-    total = len(list(session.scalars(select(Order.id).where(Order.status == "PUBLISHED"))))
+    total = session.scalar(select(func.count()).select_from(Order).where(Order.status == "PUBLISHED")) or 0
     return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in orders], "total": total, "page": page, "page_size": page_size}}
 
 
@@ -133,14 +133,17 @@ def claim(order_id: int, user: User = Depends(require_role("model")), session: S
 @router.get("")
 def list_my_orders(
     status_filter: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     user: User = Depends(require_role("merchant", "model")),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     statement = select(Order).where(Order.merchant_id == user.id if user.role == "merchant" else Order.model_id == user.id)
     if status_filter:
         statement = statement.where(Order.status == status_filter)
-    orders = list(session.scalars(statement.order_by(Order.created_at.desc())))
-    return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in orders], "total": len(orders)}}
+    total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
+    orders = list(session.scalars(statement.order_by(Order.created_at.desc()).offset((page - 1) * page_size).limit(page_size)))
+    return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in orders], "total": total, "page": page, "page_size": page_size}}
 
 
 @router.get("/{order_id}")

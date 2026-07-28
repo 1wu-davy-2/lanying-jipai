@@ -1,9 +1,12 @@
+import os
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import uploads_directory
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
 from app.routers.orders import router as orders_router
@@ -15,17 +18,22 @@ from app.routers.wallets import router as wallets_router
 from app.routers.withdrawals import admin_router as admin_withdrawals_router
 from app.routers.withdrawals import router as withdrawals_router
 
-app = FastAPI()
+app = FastAPI(docs_url=None if os.getenv("APP_ENV") == "production" else "/docs", redoc_url=None if os.getenv("APP_ENV") == "production" else "/redoc")
 
 _ERROR_CODES = {400: 1001, 401: 1002, 403: 1003, 404: 1004, 409: 1005}
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
-    message = exc.detail if isinstance(exc.detail, str) else "请求失败"
+    if isinstance(exc.detail, dict):
+        code = exc.detail.get("code", _ERROR_CODES.get(exc.status_code, exc.status_code))
+        message = exc.detail.get("message", "请求失败")
+    else:
+        code = _ERROR_CODES.get(exc.status_code, exc.status_code)
+        message = exc.detail if isinstance(exc.detail, str) else "请求失败"
     return JSONResponse(
         status_code=exc.status_code,
-        content={"code": _ERROR_CODES.get(exc.status_code, exc.status_code), "message": message, "data": None},
+        content={"code": code, "message": message, "data": None},
     )
 
 
@@ -42,6 +50,7 @@ app.include_router(health_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(admin_users_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 app.include_router(orders_router, prefix="/api")
 app.include_router(uploads_router, prefix="/api")
 app.include_router(wallets_router, prefix="/api")

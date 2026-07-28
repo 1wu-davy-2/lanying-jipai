@@ -14,11 +14,12 @@ const tabs: { key: OrderStatus | "all"; label: string }[] = [
 export function ModelOrdersPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<OrderStatus | "all">("all");
-  const { data, isLoading } = useQuery({ queryKey: ["model-orders", status], queryFn: () => getMyOrders(status === "all" ? undefined : status) });
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useQuery({ queryKey: ["model-orders", status, page], queryFn: () => getMyOrders(status === "all" ? undefined : status, page) });
   return <div>
     <div className="page-heading"><Typography.Title level={2}>我的订单</Typography.Title></div>
-    <Tabs activeKey={status} onChange={(key) => setStatus(key as OrderStatus | "all")} items={tabs} />
-    <Table rowKey="id" loading={isLoading} dataSource={data?.items ?? []} pagination={false} onRow={(record) => ({ onClick: () => navigate(`/model/orders/${record.id}`), className: "table-row-link" })} columns={[
+    <Tabs activeKey={status} onChange={(key) => { setStatus(key as OrderStatus | "all"); setPage(1); }} items={tabs} />
+    <Table rowKey="id" loading={isLoading} dataSource={data?.items ?? []} pagination={{ current: page, pageSize: 20, total: data?.total ?? 0, onChange: setPage, showSizeChanger: false }} onRow={(record) => ({ onClick: () => navigate(`/model/orders/${record.id}`), className: "table-row-link" })} columns={[
       { title: "订单", dataIndex: "title" },
       { title: "商家佣金", dataIndex: "commission_amount", render: (value) => `¥${value}` },
       { title: "状态", dataIndex: "status", render: (value) => <OrderStatusTag status={value} /> },

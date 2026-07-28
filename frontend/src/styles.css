@@ -32,4 +32,17 @@ body { margin: 0; min-width: 320px; }
 .message-board { margin-top: 18px; }
 .message-board .ant-list-item { align-items: flex-start; }
 .message-composer { width: 100%; margin-top: 14px; }
+.section-card { margin-top: 18px; }
+.balance-card { border-color: #dce8e4; }
+.balance-card span { display: block; color: #627173; }
+.balance-card strong { display: block; margin-top: 8px; font-size: 28px; color: #0f766e; }
+.amount-positive { color: #0f766e; font-weight: 600; }
+.amount-negative { color: #b45309; font-weight: 600; }
+.narrow-page { max-width: 640px; }
+.withdrawal-balance { margin-bottom: 24px; color: #627173; }
+.withdrawal-balance strong { margin-left: 8px; color: #0f766e; font-size: 20px; }
+.dashboard-grid .ant-card { border-color: #dce8e4; }
+.filter-bar { margin-bottom: 18px; }
+.filter-bar .ant-input-affix-wrapper, .filter-bar .ant-input-search { min-width: 210px; }
+.masked-id { color: #627173; }
 @media (max-width: 760px) { .auth-page { grid-template-columns: 1fr; } .auth-image { min-height: 190px; } .auth-image-overlay { padding: 24px; } .auth-image-overlay p { display: none; } .auth-panel { padding: 40px 24px; align-items: start; } .workspace-sider { width: 180px !important; flex: 0 0 180px !important; max-width: 180px !important; min-width: 180px !important; } }
