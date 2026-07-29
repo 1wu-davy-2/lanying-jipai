@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from app.database import get_db
 from app.deps import get_current_user, require_role
 from app.models.user import MerchantProfile, ModelProfile, User
 from app.schemas.user import (
+    AdminMerchantCreateRequest,
     MerchantProfileRequest,
     ModelProfileRequest,
     UserUpdateRequest,
@@ -13,7 +14,7 @@ from app.schemas.user import (
     VerifyReviewRequest,
     UserStatusUpdateRequest,
 )
-from app.security import decrypt_sensitive, encrypt_sensitive, mask_id_card
+from app.security import decrypt_sensitive, encrypt_sensitive, hash_password, mask_id_card
 
 router = APIRouter(prefix="/users", tags=["users"])
 admin_router = APIRouter(prefix="/admin/users", tags=["admin users"])
@@ -114,6 +115,32 @@ def submit_verification(
     current_user.verify_status = "pending"
     session.commit()
     return {"code": 0, "message": "ok", "data": serialize_user(current_user)}
+
+
+@admin_router.post("/merchants", status_code=status.HTTP_201_CREATED)
+def create_merchant(
+    payload: AdminMerchantCreateRequest,
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    if session.scalar(select(User).where(User.phone == payload.phone)) is not None:
+        raise HTTPException(status_code=409, detail="手机号已注册")
+    merchant = User(
+        phone=payload.phone,
+        password_hash=hash_password(payload.password),
+        role="merchant",
+        nickname=payload.nickname or payload.shop_name,
+    )
+    merchant.merchant_profile = MerchantProfile(
+        shop_name=payload.shop_name,
+        shop_platform=payload.shop_platform,
+        contact_phone=payload.contact_phone,
+        default_ship_address=payload.default_ship_address,
+    )
+    session.add(merchant)
+    session.commit()
+    session.refresh(merchant)
+    return {"code": 0, "message": "ok", "data": serialize_user(merchant, include_payment_details=False)}
 
 
 @admin_router.put("/{user_id}/verify")

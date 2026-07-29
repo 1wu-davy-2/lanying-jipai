@@ -68,3 +68,97 @@ def test_admin_can_arbitrate_a_dispute_and_view_dashboard() -> None:
     dashboard = client.get("/api/admin/dashboard/summary", headers=admin)
     assert dashboard.status_code == 200
     assert dashboard.json()["data"]["month_completed_amount"] == "88.00"
+
+
+def test_admin_can_operate_orders_for_a_selected_merchant() -> None:
+    client = TestClient(app)
+    admin = admin_headers()
+    merchant_response = client.post(
+        "/api/admin/users/merchants",
+        headers=admin,
+        json={
+            "phone": "13700000005",
+            "password": "secure-password",
+            "nickname": "运营代发商家",
+            "shop_name": "运营店铺",
+            "shop_platform": "淘宝",
+            "contact_phone": "13700000005",
+            "default_ship_address": "上海市浦东新区",
+        },
+    )
+    assert merchant_response.status_code == 201
+    merchant = merchant_response.json()["data"]
+    assert merchant["role"] == "merchant"
+    assert merchant["merchant_profile"]["shop_name"] == "运营店铺"
+
+    duplicate = client.post(
+        "/api/admin/users/merchants",
+        headers=admin,
+        json={
+            "phone": "13700000005",
+            "password": "secure-password",
+            "shop_name": "重复店铺",
+            "contact_phone": "13700000005",
+            "default_ship_address": "上海市浦东新区",
+        },
+    )
+    assert duplicate.status_code == 409
+
+    model_headers = {"Authorization": f"Bearer {register(client, '13700000006', 'model')}"}
+    model = client.get("/api/users/me", headers=model_headers).json()["data"]
+    invalid_target = client.post(
+        "/api/admin/orders",
+        headers=admin,
+        json={"merchant_id": model["id"], "title": "错误目标", "description": "达人不能作为商家", "commission_amount": "1.00"},
+    )
+    assert invalid_target.status_code == 400
+
+    created = client.post(
+        "/api/admin/orders",
+        headers=admin,
+        json={
+            "merchant_id": merchant["id"],
+            "title": "运营代发测试订单",
+            "description": "运营人员代商家发布",
+            "commission_amount": "100.00",
+        },
+    )
+    assert created.status_code == 201
+    order_id = created.json()["data"]["id"]
+    assert created.json()["data"]["merchant_id"] == merchant["id"]
+
+    assert client.post(f"/api/orders/{order_id}/claim", headers=model_headers).status_code == 200
+    assert client.put(f"/api/admin/orders/{order_id}/ship", headers=admin, json={"tracking_no": "SF300", "company": "顺丰"}).status_code == 200
+    assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
+    assert client.put(
+        f"/api/orders/{order_id}/submit",
+        headers=model_headers,
+        json={"submitted_media": ["/uploads/submitted.jpg"], "tracking_no": "SF301", "company": "顺丰"},
+    ).status_code == 200
+    accepted = client.put(f"/api/admin/orders/{order_id}/accept", headers=admin)
+    assert accepted.status_code == 200
+    assert accepted.json()["data"]["status"] == "COMPLETED"
+    assert client.put(f"/api/admin/orders/{order_id}/accept", headers=admin).status_code == 409
+
+    detail = client.get(f"/api/orders/{order_id}", headers=admin)
+    assert detail.status_code == 200
+    data = detail.json()["data"]
+    assert data["merchant"]["id"] == merchant["id"]
+    assert [log["to_status"] for log in data["logs"]] == ["PUBLISHED", "CLAIMED", "SHIPPED_TO_MODEL", "IN_PROGRESS", "RETURNED", "COMPLETED"]
+    assert all(log["operator"]["role"] == "admin" for log in (data["logs"][0], data["logs"][2], data["logs"][-1]))
+
+    filtered = client.get("/api/admin/orders", headers=admin, params={"merchant_id": merchant["id"]})
+    assert filtered.status_code == 200
+    assert [order["id"] for order in filtered.json()["data"]["items"]] == [order_id]
+
+    wallet = client.get("/api/wallets/me", headers=model_headers)
+    assert wallet.status_code == 200
+    assert wallet.json()["data"]["available_balance"] == "100.00"
+
+    assert client.put(f"/api/admin/users/{merchant['id']}/status", headers=admin, json={"status": "disabled"}).status_code == 200
+    disabled_target = client.post(
+        "/api/admin/orders",
+        headers=admin,
+        json={"merchant_id": merchant["id"], "title": "禁用商家", "description": "不应允许代发", "commission_amount": "1.00"},
+    )
+    assert disabled_target.status_code == 409

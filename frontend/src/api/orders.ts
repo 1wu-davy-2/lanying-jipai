@@ -1,4 +1,5 @@
 import { client, request } from "./client";
+import type { UserRole } from "../types";
 
 export type OrderStatus = "DRAFT" | "PUBLISHED" | "CLAIMED" | "SHIPPED_TO_MODEL" | "IN_PROGRESS" | "RETURNED" | "COMPLETED" | "DISPUTED" | "CANCELLED";
 
@@ -30,9 +31,13 @@ export interface OrderLog {
   to_status: OrderStatus;
   remark: string | null;
   created_at: string | null;
+  operator: { id: number; nickname: string; role: UserRole } | null;
 }
 
-export interface OrderDetail extends OrderItem { logs: OrderLog[]; }
+export interface OrderDetail extends OrderItem {
+  logs: OrderLog[];
+  merchant: { id: number; nickname: string; phone: string } | null;
+}
 
 interface OrderList { items: OrderItem[]; total: number; page?: number; page_size?: number; }
 

@@ -88,4 +88,17 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "运营看板" })).toBeInTheDocument();
   });
+
+  it("shows the operations order workspace for an administrator", () => {
+    useAuthStore.setState({
+      session: {
+        access_token: "token", refresh_token: "refresh", token_type: "bearer",
+        user: { id: 3, phone: "13800138002", role: "admin", nickname: "管理员" },
+      },
+    });
+    renderWithProviders("/admin/operations");
+
+    expect(screen.getByRole("heading", { name: "运营发单" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新建商家" })).toBeInTheDocument();
+  });
 });

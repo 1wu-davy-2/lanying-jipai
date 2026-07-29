@@ -31,6 +31,12 @@ class MerchantProfileRequest(BaseModel):
     default_ship_address: str = Field(min_length=1, max_length=255)
 
 
+class AdminMerchantCreateRequest(MerchantProfileRequest):
+    phone: str = Field(min_length=6, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
+    nickname: str | None = Field(default=None, max_length=50)
+
+
 class ModelProfileRequest(BaseModel):
     height_cm: int | None = Field(default=None, ge=1, le=300)
     weight_kg: int | None = Field(default=None, ge=1, le=500)

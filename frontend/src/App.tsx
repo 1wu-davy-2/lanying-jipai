@@ -19,7 +19,7 @@ export function App() {
       <Route element={<ProtectedRoute roles={["admin"]} />}>
         <Route path="/admin/*" element={<RoleWorkspace role="admin" />} />
       </Route>
-      <Route path="/" element={<Navigate to="/merchant/orders" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

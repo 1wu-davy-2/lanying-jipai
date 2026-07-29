@@ -4,7 +4,7 @@ import { useAuthStore } from "../stores/authStore";
 import type { UserRole } from "../types";
 
 function roleHome(role: UserRole) {
-  return role === "merchant" ? "/merchant/orders" : role === "model" ? "/model/hall" : "/admin/dashboard";
+  return role === "merchant" ? "/merchant/orders" : role === "model" ? "/model/hall" : "/admin/operations";
 }
 
 export function ProtectedRoute({ roles }: { roles: UserRole[] }) {

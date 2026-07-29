@@ -14,6 +14,10 @@ class OrderCreateRequest(BaseModel):
     shoot_requirements: str | None = None
 
 
+class AdminOrderCreateRequest(OrderCreateRequest):
+    merchant_id: int = Field(gt=0)
+
+
 class ShipmentRequest(BaseModel):
     tracking_no: str = Field(min_length=1, max_length=50)
     company: str = Field(min_length=1, max_length=50)

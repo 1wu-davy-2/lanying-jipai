@@ -8,7 +8,7 @@ import type { UserRole } from "../../types";
 import { AuthFrame } from "./AuthFrame";
 
 function roleHome(role: UserRole) {
-  return role === "merchant" ? "/merchant/orders" : role === "model" ? "/model/hall" : "/admin/dashboard";
+  return role === "merchant" ? "/merchant/orders" : role === "model" ? "/model/hall" : "/admin/operations";
 }
 
 export function LoginPage() {

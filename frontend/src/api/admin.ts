@@ -14,6 +14,12 @@ export interface AdminUser {
   id_card_no: string | null;
   verify_status: "unverified" | "pending" | "verified" | "rejected";
   verify_reject_reason: string | null;
+  merchant_profile?: {
+    shop_name: string;
+    shop_platform: string | null;
+    contact_phone: string;
+    default_ship_address: string;
+  } | null;
 }
 
 export interface DashboardSummary {
@@ -26,9 +32,15 @@ export interface DashboardSummary {
 
 export function getDashboard() { return request<DashboardSummary>(client.get("/admin/dashboard/summary")); }
 export function getAdminUsers(params: Record<string, string | undefined> = {}) { return request<Page<AdminUser>>(client.get("/admin/users", { params })); }
+export function createAdminMerchant(values: { phone: string; password: string; nickname?: string; shop_name: string; shop_platform?: string; contact_phone: string; default_ship_address: string }) { return request<AdminUser>(client.post("/admin/users/merchants", values)); }
 export function updateAdminUserStatus(userId: number, status: "active" | "disabled") { return request<AdminUser>(client.put(`/admin/users/${userId}/status`, { status })); }
 export function reviewVerification(userId: number, approved: boolean, reason?: string) { return request<AdminUser>(client.put(`/admin/users/${userId}/verify`, { approved, reason })); }
-export function getAdminOrders(params: Record<string, string | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
+export function getAdminOrders(params: Record<string, string | number | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
+export function createAdminOrder(values: { merchant_id: number; title: string; description: string; commission_amount: string; sample_images: string[]; shoot_requirements?: string }) { return request<OrderItem>(client.post("/admin/orders", values)); }
+export function shipAdminOrder(orderId: number, values: { tracking_no: string; company: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/ship`, values)); }
+export function acceptAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/accept`)); }
+export function rejectAdminOrder(orderId: number, reason: string) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/reject`, { reason })); }
+export function cancelAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/cancel`)); }
 export function getDisputedOrders() { return request<Page<OrderItem>>(client.get("/admin/orders/disputed")); }
 export function arbitrateOrder(orderId: number, values: { winner: "model" | "merchant"; remark: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/arbitrate`, values)); }
 export function getAdminWithdrawals(status_filter?: string) { return request<Page<Withdrawal>>(client.get("/admin/withdrawals", { params: status_filter ? { status_filter } : undefined })); }

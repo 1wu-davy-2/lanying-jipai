@@ -84,15 +84,10 @@ def advance(
     return {"code": 0, "message": "ok", "data": serialize_order(order)}
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-def create_order(
-    payload: OrderCreateRequest,
-    user: User = Depends(require_role("merchant")),
-    session: Session = Depends(get_db),
-) -> dict[str, object]:
-    order = Order(
+def new_published_order(payload: OrderCreateRequest, merchant_id: int) -> Order:
+    return Order(
         order_no=new_order_no(),
-        merchant_id=user.id,
+        merchant_id=merchant_id,
         title=payload.title,
         description=payload.description,
         sample_images=json.dumps(payload.sample_images),
@@ -101,6 +96,15 @@ def create_order(
         shoot_requirements=payload.shoot_requirements,
         status="PUBLISHED",
     )
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_order(
+    payload: OrderCreateRequest,
+    user: User = Depends(require_role("merchant")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    order = new_published_order(payload, user.id)
     session.add(order)
     session.commit()
     session.refresh(order)
@@ -151,6 +155,8 @@ def order_detail(order_id: int, user: User = Depends(get_current_user), session:
     order = get_order(session, order_id)
     ensure_order_member(order, user)
     data = serialize_order(order)
+    merchant = session.get(User, order.merchant_id)
+    data["merchant"] = None if merchant is None else {"id": merchant.id, "nickname": merchant.nickname, "phone": merchant.phone}
     logs = list(session.scalars(select(OrderLog).where(OrderLog.order_id == order.id).order_by(OrderLog.created_at.asc(), OrderLog.id.asc())))
     data["logs"] = [
         {
@@ -160,6 +166,11 @@ def order_detail(order_id: int, user: User = Depends(get_current_user), session:
             "to_status": log.to_status,
             "remark": log.remark,
             "created_at": log.created_at.isoformat() if log.created_at else None,
+            "operator": (
+                None
+                if (operator := session.get(User, log.operator_id)) is None
+                else {"id": operator.id, "nickname": operator.nickname, "role": operator.role}
+            ),
         }
         for log in logs
     ]
