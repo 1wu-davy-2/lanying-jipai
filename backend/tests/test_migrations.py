@@ -25,6 +25,7 @@ def test_initial_migration_creates_account_tables(tmp_path, monkeypatch) -> None
         "wallet_transactions",
         "withdrawals",
         "platform_configs",
+        "media_backup_jobs",
     } <= set(inspect(engine).get_table_names())
     assert "product_categories" in {column["name"] for column in inspect(engine).get_columns("orders")}
 
@@ -56,9 +57,10 @@ def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:
 
 
 def test_orm_identifiers_match_mariadb_bigint_migrations() -> None:
+    from app.models.media import MediaBackupJob
     from app.models.order import Order, OrderLog, OrderMessage
     from app.models.user import MerchantProfile, ModelProfile, User
     from app.models.wallet import PlatformConfig, Wallet, WalletTransaction, Withdrawal
 
-    for model in (User, MerchantProfile, ModelProfile, Order, OrderLog, OrderMessage, Wallet, WalletTransaction, Withdrawal, PlatformConfig):
+    for model in (User, MerchantProfile, ModelProfile, Order, OrderLog, OrderMessage, Wallet, WalletTransaction, Withdrawal, PlatformConfig, MediaBackupJob):
         assert model.__table__.c.id.type.compile(dialect=mysql.dialect()) == "BIGINT"

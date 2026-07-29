@@ -79,7 +79,7 @@ frontend/
 ## 4. 关键交互细节
 
 - **抢单大厅实时性**：MVP 阶段用 TanStack Query 的轮询（`refetchInterval` 15s）刷新列表和详情状态，暂不引入 WebSocket。后续订单量大/需要秒抢体验时再升级为 WebSocket 推送，接口层已经是分离的，替换成本低。
-- **图片/文件上传**：前端用 Ant Design `Upload` 组件直传后端 `/api/uploads` 接口（后端存本地磁盘 `backend/uploads/{year}/{month}/`，返回可访问 URL），限制单文件大小（如 10MB）和类型（图片/视频）。
+- **图片/文件上传**：前端用 Ant Design `Upload` 组件提交到 `/api/uploads`。开发环境写入本地 `backend/uploads/{year}/{month}/`；生产环境写入 COS 并返回 COS 公网 URL。后端会同步写入同对象键的 MinIO 备份，MinIO 地址不进入前端数据，限制单文件大小（如 10MB）和类型（图片/视频）。
 - **状态徽标颜色映射**：统一在 `OrderStatusTag.tsx` 维护一份 `status → {text, color}` 映射，避免各页面各写一套。
 - **金额展示**：所有金额前端展示保留 2 位小数，输入框用 `InputNumber` 限制精度，提交前后端仍需再校验一次（不信任前端）。
 

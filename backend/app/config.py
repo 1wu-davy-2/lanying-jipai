@@ -25,6 +25,18 @@ class Settings(BaseSettings):
     access_token_minutes: int = 30
     refresh_token_days: int = 7
     uploads_dir: str = "uploads"
+    upload_storage_driver: str = "local"
+    cos_bucket: str | None = None
+    cos_region: str | None = None
+    cos_secret_id: str | None = None
+    cos_secret_key: str | None = None
+    cos_public_base_url: str | None = None
+    minio_endpoint: str | None = None
+    minio_access_key: str | None = None
+    minio_secret_key: str | None = None
+    minio_bucket: str | None = None
+    minio_secure: bool = True
+    media_backup_retry_base_minutes: int = 15
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

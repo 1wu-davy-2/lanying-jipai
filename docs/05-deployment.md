@@ -22,7 +22,7 @@
   backend/                  # 后端代码（git clone 或 CI 产物）
     venv/                     # Python 虚拟环境
     .env                       # 环境变量（数据库密码、JWT 密钥等，权限 600，不进 git）
-    uploads/                    # 用户上传文件
+    uploads/                    # 仅开发环境和历史本地媒体；生产新媒体使用 COS
   frontend-dist/             # 前端构建产物（npm run build 后的 dist 内容）
 /var/log/lanying-jipai/
   backend.log                # 应用日志（或用 systemd journal）
@@ -37,7 +37,7 @@
    python3.11 -m venv venv
    ./venv/bin/pip install -r requirements.txt gunicorn uvicorn[standard]
    ```
-4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。
+4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。生产环境将 `UPLOAD_STORAGE_DRIVER=cos`，填写 `COS_*` 与内部 `MINIO_*` 配置；COS 用于公网读取，MinIO 只作备份，不配置到 Nginx。
 5. 执行数据库迁移：`./venv/bin/alembic upgrade head`。
 6. 复制仓库中的 `deploy/lanying-backend.service` 到 `/etc/systemd/system/lanying-backend.service`，确认 `User`、路径和虚拟环境名称与服务器一致：
    ```ini

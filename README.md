@@ -22,7 +22,7 @@
   |
   +-- /api --> FastAPI + SQLAlchemy + Alembic --> MariaDB
   |
-  +-- /uploads --> 本地媒体目录（生产环境由 Nginx 静态托管）
+  +-- 媒体 --> 开发环境本地 uploads；生产环境 COS 公网 URL（MinIO 仅作内部备份）
 ```
 
 后端按 `router -> service -> model` 分层。订单状态转换和钱包余额变动由服务层控制；订单抢单、状态迁移和余额冻结都使用数据库条件更新，防止并发下重复抢单、重复结算或超额提现。
