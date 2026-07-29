@@ -21,6 +21,13 @@ function renderWithProviders(path: string) {
 }
 
 describe("App", () => {
+  it("shows separate operations and talent entry points", () => {
+    renderWithProviders("/");
+
+    expect(screen.getByRole("button", { name: /运营管理端/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /达人端/ })).toBeInTheDocument();
+  });
+
   it("redirects an anonymous protected-route visitor to login", () => {
     renderWithProviders("/merchant/orders");
 
@@ -63,6 +70,12 @@ describe("App", () => {
     renderWithProviders("/model/orders");
 
     expect(screen.getByRole("heading", { name: "我的订单" })).toBeInTheDocument();
+  });
+
+  it("sends an anonymous talent visitor to the talent login page", () => {
+    renderWithProviders("/model/hall");
+
+    expect(screen.getByRole("heading", { name: "达人端登录" })).toBeInTheDocument();
   });
 
   it("shows the wallet workspace for a model", () => {

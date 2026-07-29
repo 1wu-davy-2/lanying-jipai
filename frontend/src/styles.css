@@ -13,6 +13,13 @@ body { margin: 0; min-width: 320px; }
 .auth-subtitle { margin-bottom: 34px; color: #6a787a; }
 .auth-switch { margin-top: 24px; text-align: center; color: #6a787a; }
 .auth-switch a { color: #0f766e; font-weight: 600; }
+.entry-options { display: grid; gap: 12px; }
+.entry-option.ant-btn { height: auto; min-height: 94px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 18px; align-items: center; gap: 14px; padding: 16px; text-align: left; border-color: #dce8e4; border-radius: 6px; color: #172026; }
+.entry-option.ant-btn:hover { border-color: #0f766e; color: #0f766e; background: #f1fbf8; }
+.entry-option-icon { font-size: 22px; }
+.entry-option span { display: grid; gap: 5px; }
+.entry-option strong { font-size: 16px; }
+.entry-option small { color: #6a787a; font-size: 13px; line-height: 1.4; }
 .workspace-shell { min-height: 100vh; }
 .workspace-sider { background: #15272a !important; padding: 20px 12px; }
 .workspace-brand { color: #f5fbfa; font-size: 18px; font-weight: 700; padding: 0 12px 24px; }

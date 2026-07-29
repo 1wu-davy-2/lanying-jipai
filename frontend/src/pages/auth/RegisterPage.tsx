@@ -34,7 +34,7 @@ export function RegisterPage() {
           <Form.Item name="password" label="密码" rules={[{ required: true, min: 8, message: "密码至少 8 位" }]}><Input.Password size="large" autoComplete="new-password" /></Form.Item>
           <Button type="primary" htmlType="submit" size="large" block loading={submitting}>创建账号</Button>
         </Form>
-        <p className="auth-switch">已有账号？<Link to="/login">返回登录</Link></p>
+        <p className="auth-switch">已有账号？<Link to="/talent/login">返回达人登录</Link></p>
       </div>
     </AuthFrame>
   );
