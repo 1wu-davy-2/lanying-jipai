@@ -8,6 +8,7 @@ def test_settings_reads_required_values_from_environment(monkeypatch) -> None:
     )
     monkeypatch.setenv("JWT_SECRET_KEY", "test-jwt-placeholder")
     monkeypatch.setenv("AES_KEY", "test-aes-placeholder")
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com,https://localhost")
 
     settings = Settings(_env_file=None)
 
@@ -16,3 +17,4 @@ def test_settings_reads_required_values_from_environment(monkeypatch) -> None:
     )
     assert settings.jwt_secret_key == "test-jwt-placeholder"
     assert settings.aes_key == "test-aes-placeholder"
+    assert settings.cors_origins == "https://app.example.com,https://localhost"

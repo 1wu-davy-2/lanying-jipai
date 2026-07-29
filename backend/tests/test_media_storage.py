@@ -7,7 +7,7 @@ from app.database import get_session_factory
 from app.main import app
 from app.models.media import MediaBackupJob
 from app.services import media_backup
-from app.services.media_storage import StorageConfigurationError, get_media_storage
+from app.services.media_storage import MinioCosMediaStorage, StorageConfigurationError, get_media_storage
 
 
 def register(client: TestClient, phone: str) -> str:
@@ -25,6 +25,8 @@ def valid_png() -> bytes:
 
 
 class FakeCosMinioStorage:
+    primary_storage = "cos"
+    backup_storage = "minio"
     backup_enabled = True
 
     def __init__(self, fail_backup: bool = False) -> None:
@@ -43,6 +45,24 @@ class FakeCosMinioStorage:
 
     def fetch_primary(self, object_key: str) -> bytes:
         return self.primary[object_key]
+
+
+class FakeMinioStorage:
+    primary_storage = "minio"
+    backup_storage = None
+    backup_enabled = False
+
+    def __init__(self) -> None:
+        self.primary: dict[str, bytes] = {}
+
+    def upload_primary(self, object_key: str, content: bytes, content_type: str) -> str:
+        self.primary[object_key] = content
+        return f"https://media.example.com/{object_key}"
+
+
+class FakeMinioCosStorage(FakeCosMinioStorage):
+    primary_storage = "minio"
+    backup_storage = "cos"
 
 
 def test_cos_storage_rejects_incomplete_configuration(monkeypatch) -> None:
@@ -67,6 +87,24 @@ def test_cos_storage_rejects_incomplete_configuration(monkeypatch) -> None:
         raise AssertionError("incomplete COS configuration must be rejected")
 
 
+def test_minio_primary_works_without_cos_backup_configuration(monkeypatch) -> None:
+    monkeypatch.setenv("UPLOAD_STORAGE_DRIVER", "minio")
+    monkeypatch.setenv("MINIO_ENDPOINT", "127.0.0.1:9000")
+    monkeypatch.setenv("MINIO_ACCESS_KEY", "minio-access")
+    monkeypatch.setenv("MINIO_SECRET_KEY", "minio-secret")
+    monkeypatch.setenv("MINIO_BUCKET", "lanying-media")
+    monkeypatch.setenv("MINIO_PUBLIC_BASE_URL", "https://media.example.com")
+    monkeypatch.setenv("COS_BACKUP_ENABLED", "false")
+    for name in ("COS_BUCKET", "COS_REGION", "COS_SECRET_ID", "COS_SECRET_KEY"):
+        monkeypatch.delenv(name, raising=False)
+
+    storage = get_media_storage()
+
+    assert isinstance(storage, MinioCosMediaStorage)
+    assert storage.backup_enabled is False
+    assert storage.public_url("2026/07/sample.png") == "https://media.example.com/2026/07/sample.png"
+
+
 def test_cos_upload_returns_public_url_and_syncs_minio(monkeypatch) -> None:
     from app.routers import uploads as uploads_router
 
@@ -87,6 +125,7 @@ def test_cos_upload_returns_public_url_and_syncs_minio(monkeypatch) -> None:
     try:
         job = session.query(MediaBackupJob).one()
         assert job.object_key == object_key
+        assert (job.primary_storage, job.backup_storage) == ("cos", "minio")
         assert job.status == "SYNCED"
         assert job.attempt_count == 1
     finally:
@@ -119,7 +158,7 @@ def test_minio_failure_keeps_cos_upload_and_queues_retry(monkeypatch) -> None:
 def test_pending_backup_is_retried_from_cos(monkeypatch) -> None:
     storage = FakeCosMinioStorage()
     storage.primary["2026/07/retry.png"] = b"content"
-    monkeypatch.setattr(media_backup, "get_media_storage", lambda: storage)
+    monkeypatch.setattr(media_backup, "get_storage_for_backup", lambda *_: storage)
     session = get_session_factory()()
     try:
         session.add(
@@ -138,5 +177,44 @@ def test_pending_backup_is_retried_from_cos(monkeypatch) -> None:
         job = session.query(MediaBackupJob).one()
         assert job.status == "SYNCED"
         assert storage.backups[job.object_key] == b"content"
+    finally:
+        session.close()
+
+
+def test_minio_primary_upload_does_not_require_cos_backup(monkeypatch) -> None:
+    from app.routers import uploads as uploads_router
+
+    storage = FakeMinioStorage()
+    monkeypatch.setattr(uploads_router, "get_media_storage", lambda: storage)
+    client = TestClient(app)
+    headers = {"Authorization": f"Bearer {register(client, '13300000011')}"}
+
+    response = client.post("/api/uploads", headers=headers, files={"file": ("sample.png", valid_png(), "image/png")})
+
+    assert response.status_code == 201
+    assert response.json()["data"]["url"].startswith("https://media.example.com/")
+    session = get_session_factory()()
+    try:
+        assert session.query(MediaBackupJob).count() == 0
+    finally:
+        session.close()
+
+
+def test_minio_primary_queues_failed_cos_backup(monkeypatch) -> None:
+    from app.routers import uploads as uploads_router
+
+    storage = FakeMinioCosStorage(fail_backup=True)
+    monkeypatch.setattr(uploads_router, "get_media_storage", lambda: storage)
+    client = TestClient(app)
+    headers = {"Authorization": f"Bearer {register(client, '13300000012')}"}
+
+    response = client.post("/api/uploads", headers=headers, files={"file": ("sample.png", valid_png(), "image/png")})
+
+    assert response.status_code == 201
+    session = get_session_factory()()
+    try:
+        job = session.query(MediaBackupJob).one()
+        assert (job.primary_storage, job.backup_storage) == ("minio", "cos")
+        assert job.status == "PENDING"
     finally:
         session.close()

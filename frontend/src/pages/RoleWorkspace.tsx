@@ -1,4 +1,4 @@
-import { LogoutOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, FileTextOutlined, LogoutOutlined, UserOutlined, WalletOutlined } from "@ant-design/icons";
 import { Button, Layout, Menu, Typography } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -46,8 +46,18 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
   const adminOrdersRoute = role === "admin" && currentPage === "orders";
   const adminDisputesRoute = role === "admin" && currentPage === "disputes";
   const adminWithdrawalsRoute = role === "admin" && currentPage === "withdrawals";
+  const talentMobileNavigation = [
+    { key: "hall", label: "抢单", icon: <AppstoreOutlined /> },
+    { key: "orders", label: "订单", icon: <FileTextOutlined /> },
+    { key: "wallet", label: "钱包", icon: <WalletOutlined /> },
+    { key: "profile", label: "我的", icon: <UserOutlined /> },
+  ];
+  const logout = () => {
+    clearSession();
+    navigate(role === "model" ? "/talent/login" : "/login");
+  };
   return (
-    <Layout className="workspace-shell">
+    <Layout className={`workspace-shell ${role === "model" ? "talent-workspace-shell" : ""}`}>
       <Layout.Sider width={224} className="workspace-sider">
         <div className="workspace-brand">蓝鹰寄拍</div>
         <Menu theme="dark" mode="inline" selectedKeys={orderId ? [role === "admin" ? "operations" : "orders"] : modelWithdrawRoute ? ["wallet"] : currentPage ? [currentPage] : []} items={navigation[role]} onClick={({ key }) => navigate(`/${role}/${key}`)} />
@@ -55,10 +65,12 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
       <Layout>
         <Layout.Header className="workspace-header">
           <span>{session?.user.nickname}</span>
-          <Button type="text" icon={<LogoutOutlined />} onClick={() => { clearSession(); navigate("/login"); }}>退出</Button>
+          <Button type="text" icon={<LogoutOutlined />} onClick={logout}>退出</Button>
         </Layout.Header>
+        {role === "model" && <div className="talent-mobile-header"><strong>蓝影寄拍</strong><span>{session?.user.nickname}</span><Button type="text" icon={<LogoutOutlined />} aria-label="退出登录" onClick={logout} /></div>}
         <Layout.Content className="workspace-content">{orderId ? <OrderDetailPage role={role} orderId={orderId} /> : modelWithdrawRoute ? <WithdrawalApplyPage /> : profileRoute ? <ProfilePage role={role} /> : merchantOrdersRoute ? <MerchantOrdersPage /> : modelHallRoute ? <ModelHallPage /> : modelOrdersRoute ? <ModelOrdersPage /> : modelWalletRoute ? <WalletPage /> : adminOperationsRoute ? <AdminOperationsPage /> : adminDashboardRoute ? <AdminDashboardPage /> : adminUsersRoute ? <AdminUsersPage /> : adminOrdersRoute ? <AdminOrdersPage /> : adminDisputesRoute ? <AdminDisputesPage /> : adminWithdrawalsRoute ? <AdminWithdrawalsPage /> : <Typography.Title level={2}>{labels[role]}</Typography.Title>}</Layout.Content>
       </Layout>
+      {role === "model" && <nav className="talent-mobile-nav" aria-label="达人导航">{talentMobileNavigation.map((item) => <button type="button" aria-label={item.label} className={currentPage === item.key || (orderId && item.key === "orders") || (modelWithdrawRoute && item.key === "wallet") ? "active" : ""} key={item.key} onClick={() => navigate(`/model/${item.key}`)}>{item.icon}<span>{item.label}</span></button>)}</nav>}
     </Layout>
   );
 }

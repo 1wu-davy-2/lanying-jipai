@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Lanying Jipai API"
     app_env: str = "development"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://localhost,capacitor://localhost"
     database_url: str
     jwt_secret_key: str
     aes_key: str
@@ -36,6 +37,8 @@ class Settings(BaseSettings):
     minio_secret_key: str | None = None
     minio_bucket: str | None = None
     minio_secure: bool = True
+    minio_public_base_url: str | None = None
+    cos_backup_enabled: bool = False
     media_backup_retry_base_minutes: int = 15
 
     model_config = SettingsConfigDict(

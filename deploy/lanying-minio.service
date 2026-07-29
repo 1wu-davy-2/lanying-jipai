@@ -1,0 +1,19 @@
+[Unit]
+Description=Lanying Jipai MinIO media storage
+After=network.target
+
+[Service]
+Type=simple
+User=minio
+Group=minio
+EnvironmentFile=/etc/lanying-jipai/minio.env
+ExecStart=/usr/local/bin/minio server /srv/lanying-minio --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/srv/lanying-minio
+
+[Install]
+WantedBy=multi-user.target

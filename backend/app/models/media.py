@@ -17,6 +17,8 @@ class MediaBackupJob(TimestampMixin, Base):
     object_key: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
     content_type: Mapped[str] = mapped_column(String(100), nullable=False)
     content_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    primary_storage: Mapped[str] = mapped_column(String(20), nullable=False, default="cos")
+    backup_storage: Mapped[str] = mapped_column(String(20), nullable=False, default="minio")
     status: Mapped[str] = mapped_column(String(20), index=True, nullable=False, default="PENDING")
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

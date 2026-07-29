@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.models.media import MediaBackupJob
-from app.services.media_storage import CosMinioMediaStorage, get_media_storage
+from app.services.media_storage import (
+    CosMinioMediaStorage,
+    MinioCosMediaStorage,
+    get_storage_for_backup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +47,20 @@ def _mark_retry(session: Session, job: MediaBackupJob, error: Exception) -> None
     session.commit()
 
 
-def create_backup_job(session: Session, object_key: str, content_type: str, content_size: int) -> MediaBackupJob:
+def create_backup_job(
+    session: Session,
+    object_key: str,
+    content_type: str,
+    content_size: int,
+    primary_storage: str,
+    backup_storage: str,
+) -> MediaBackupJob:
     job = MediaBackupJob(
         object_key=object_key,
         content_type=content_type,
         content_size=content_size,
+        primary_storage=primary_storage,
+        backup_storage=backup_storage,
         status="PENDING",
     )
     session.add(job)
@@ -58,12 +71,21 @@ def create_backup_job(session: Session, object_key: str, content_type: str, cont
 
 def sync_new_backup(
     session: Session,
-    storage: CosMinioMediaStorage,
+    storage: CosMinioMediaStorage | MinioCosMediaStorage,
     object_key: str,
     content: bytes,
     content_type: str,
 ) -> bool:
-    job = create_backup_job(session, object_key, content_type, len(content))
+    if storage.backup_storage is None:
+        raise RuntimeError("Backup storage is not configured")
+    job = create_backup_job(
+        session,
+        object_key,
+        content_type,
+        len(content),
+        storage.primary_storage,
+        storage.backup_storage,
+    )
     try:
         storage.backup_content(object_key, content, content_type)
     except Exception as exc:
@@ -75,10 +97,6 @@ def sync_new_backup(
 
 
 def retry_pending_backups(session: Session, limit: int = 100, force: bool = False) -> tuple[int, int]:
-    storage = get_media_storage()
-    if not storage.backup_enabled:
-        raise RuntimeError("Backup retry requires UPLOAD_STORAGE_DRIVER=cos")
-
     statement = select(MediaBackupJob).where(MediaBackupJob.status == "PENDING")
     if not force:
         now = utc_now()
@@ -91,6 +109,7 @@ def retry_pending_backups(session: Session, limit: int = 100, force: bool = Fals
 
     for job in jobs:
         try:
+            storage = get_storage_for_backup(job.primary_storage, job.backup_storage)
             content = storage.fetch_primary(job.object_key)
             storage.backup_content(job.object_key, content, job.content_type)
         except Exception as exc:

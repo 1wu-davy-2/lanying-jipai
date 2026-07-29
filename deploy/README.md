@@ -20,23 +20,25 @@
 
 `backup.env` 至少包含 `MYSQL_HOST`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`；`health.env` 可选包含 `ALERT_WEBHOOK_URL`。两个文件均应为 `root:deploy`、权限 `640`。
 
-## COS 与 MinIO 媒体存储
+## MinIO 主媒体存储
 
-生产环境将 `backend/.env` 中的 `UPLOAD_STORAGE_DRIVER` 设为 `cos`，并填写 `COS_*` 与 `MINIO_*` 配置。COS 桶使用公有读、私有写；`COS_PUBLIC_BASE_URL` 应设置为 COS 公网域名或 CDN 域名。COS 的 SecretId/SecretKey 只能保存在 `.env`，绝不能写入前端代码或 Nginx。
+生产环境将 `backend/.env` 中的 `UPLOAD_STORAGE_DRIVER` 设为 `minio`。`MINIO_ENDPOINT` 填写同机回环地址 `127.0.0.1:9000`，`MINIO_PUBLIC_BASE_URL` 填写浏览器可访问的 HTTPS 域名，例如 `https://media.example.com`。端口 9000 和 9001 不对公网开放；Nginx 使用 `nginx-media.conf` 将公开域名转发到 MinIO 的 `lanying-media` 桶。
 
-每个文件先写入 COS，再以相同对象键写入内部 MinIO 桶。MinIO 不对浏览器返回 URL，也不应配置公开域名或 Nginx `location`。MinIO 桶应在部署前创建，并限制为后端服务账号可写。
+供手机网页和 Android WebView 调用 API 时，将网站域名、`https://localhost`、`capacitor://localhost` 写入后端 `.env` 的 `CORS_ORIGINS`，例如 `CORS_ORIGINS=https://app.example.com,https://localhost,capacitor://localhost`。媒体域名和 API 域名都必须使用 HTTPS。
 
-`MINIO_ENDPOINT` 只填写 `host:port`，不带 `http://` 或 `https://`；是否 TLS 由 `MINIO_SECURE` 控制。为脚本增加执行权限：`chmod 750 /opt/lanying-jipai/deploy/media_backup_retry.sh`。
+安装 MinIO 二进制、创建 `minio` 系统用户和数据目录后，将 `lanying-minio.service` 安装到 `/etc/systemd/system/`。将 `MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD` 写入 `/etc/lanying-jipai/minio.env` 并设为 `root:minio`、权限 `640`，然后执行 `systemctl daemon-reload && systemctl enable --now lanying-minio`。
 
-MinIO 必须使用与应用服务器不同的磁盘或主机；部署在同一块磁盘不能提供故障冗余。COS 子账号仅授予该桶前缀的读写权限，生产环境不要使用根账号密钥。
+首次初始化桶后只允许匿名下载，不开放匿名写入、列表或控制台：`mc mb --ignore-existing local/lanying-media && mc anonymous set download local/lanying-media`。应用的 `MINIO_ACCESS_KEY` 应使用单独的最小权限账号，不能使用 Root 凭据。
 
-为失败的 MinIO 备份安装重试任务：
+COS 是可选异地备份。默认 `COS_BACKUP_ENABLED=false` 时不需要 COS 凭据；设为 `true` 后，主上传完成会同步写 COS，失败任务持久化后由下列任务重试：
 
 ```cron
 */10 * * * * /opt/lanying-jipai/deploy/media_backup_retry.sh
 ```
 
-脚本从 COS 读取待备份对象后写入 MinIO；成功后将数据库任务标记为 `SYNCED`。失败任务按指数退避保留为 `PENDING`，可手动执行 `backend/venv/bin/python -m scripts.retry_media_backups --force` 立即重试。
+脚本按任务记录的主/备方向补偿：新任务从 MinIO 写入 COS，历史 `COS -> MinIO` 任务仍可继续完成。失败任务按指数退避保留为 `PENDING`，可手动执行 `backend/venv/bin/python -m scripts.retry_media_backups --force` 立即重试。
+
+已有订单若保存了 COS 公网 URL，先执行 `backend/venv/bin/python -m scripts.migrate_cos_media_to_minio` 查看迁移数量；确认后加 `--apply`。脚本只处理订单媒体字段中精确匹配 `COS_PUBLIC_BASE_URL` 的对象，复制到 MinIO 成功后才更新 URL，非 COS URL 保持不变。
 
 ## 部署
 

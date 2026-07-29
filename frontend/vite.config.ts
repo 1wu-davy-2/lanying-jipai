@@ -3,7 +3,11 @@ import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
-  const apiProxyTarget = loadEnv(mode, ".", "VITE_").VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8000";
+  const env = loadEnv(mode, ".", "VITE_");
+  if (mode === "android" && !env.VITE_API_BASE_URL) {
+    throw new Error("VITE_API_BASE_URL is required for the Android build. Copy .env.android.example to .env.android first.");
+  }
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8000";
   return {
   plugins: [react()],
   test: {

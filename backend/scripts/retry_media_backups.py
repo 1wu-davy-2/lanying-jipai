@@ -7,7 +7,7 @@ from app.services.media_backup import retry_pending_backups
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Retry pending COS to MinIO media backups.")
+    parser = argparse.ArgumentParser(description="Retry pending media backups.")
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--force", action="store_true", help="Ignore the scheduled retry time.")
     args = parser.parse_args()

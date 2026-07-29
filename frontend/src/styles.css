@@ -75,4 +75,43 @@ body { margin: 0; min-width: 320px; }
 .talent-order-requirement { min-height: 20px; color: #6a787a; }
 .talent-order-body .ant-btn { margin-top: auto; }
 .talent-order-skeleton { min-height: 344px; padding: 18px; }
-@media (max-width: 760px) { .auth-page { grid-template-columns: 1fr; } .auth-image { min-height: 190px; } .auth-image-overlay { padding: 24px; } .auth-image-overlay p { display: none; } .auth-panel { padding: 40px 24px; align-items: start; } .workspace-sider { width: 180px !important; flex: 0 0 180px !important; max-width: 180px !important; min-width: 180px !important; } }
+.talent-mobile-header, .talent-mobile-nav { display: none; }
+.model-mobile-order-list { display: none; }
+@media (max-width: 760px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-image { min-height: 190px; }
+  .auth-image-overlay { padding: 24px; }
+  .auth-image-overlay p { display: none; }
+  .auth-panel { padding: 40px 24px; align-items: start; }
+  .talent-workspace-shell .workspace-sider, .talent-workspace-shell .workspace-header { display: none; }
+  .talent-workspace-shell .workspace-content { padding: 16px 14px 88px; }
+  .talent-mobile-header { display: flex; height: 56px; align-items: center; gap: 12px; padding: 0 14px; background: #fff; border-bottom: 1px solid #e4e9e8; }
+  .talent-mobile-header strong { color: #0f766e; font-size: 17px; }
+  .talent-mobile-header span { min-width: 0; flex: 1; overflow: hidden; color: #647477; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+  .talent-mobile-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, 1fr); height: 68px; padding: 5px 8px env(safe-area-inset-bottom); background: rgba(255, 255, 255, .98); border-top: 1px solid #dce8e4; box-shadow: 0 -4px 14px rgba(23, 32, 38, .08); }
+  .talent-mobile-nav button { display: grid; place-items: center; gap: 2px; min-width: 0; padding: 3px; border: 0; background: transparent; color: #718083; font: inherit; font-size: 11px; }
+  .talent-mobile-nav button .anticon { font-size: 20px; }
+  .talent-mobile-nav button.active { color: #0f766e; font-weight: 700; }
+  .talent-hall-heading { margin-bottom: 14px; }
+  .talent-hall-heading h2.ant-typography { font-size: 22px; }
+  .talent-hall-icon { font-size: 24px; }
+  .hall-category-filter { margin-bottom: 16px; }
+  .talent-order-grid { grid-template-columns: 1fr; gap: 12px; }
+  .talent-order-body { gap: 10px; padding: 14px; }
+  .talent-order-skeleton { min-height: 310px; }
+  .model-orders-table { display: none; }
+  .model-mobile-order-list { display: grid; gap: 10px; }
+  .model-mobile-order { display: grid; gap: 8px; width: 100%; padding: 14px; border: 1px solid #dce8e4; border-radius: 6px; background: #fff; color: #172026; text-align: left; }
+  .model-mobile-order:active { border-color: #0f766e; background: #f1fbf8; }
+  .model-mobile-order-heading, .model-mobile-order-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .model-mobile-order-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .model-mobile-order-number { color: #748285; font-size: 12px; }
+  .model-mobile-order-footer { color: #687779; font-size: 13px; }
+  .model-mobile-order-footer b { color: #b45309; font-size: 17px; }
+  .talent-workspace-shell .ant-table-wrapper { overflow-x: auto; }
+  .talent-workspace-shell .ant-table { min-width: 540px; }
+  .order-detail-grid { grid-template-columns: 1fr; }
+  .order-detail .page-heading { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .order-detail .page-heading h2.ant-typography { font-size: 22px; }
+  .workspace-content .ant-card { border-radius: 6px; }
+}

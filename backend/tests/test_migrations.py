@@ -28,6 +28,9 @@ def test_initial_migration_creates_account_tables(tmp_path, monkeypatch) -> None
         "media_backup_jobs",
     } <= set(inspect(engine).get_table_names())
     assert "product_categories" in {column["name"] for column in inspect(engine).get_columns("orders")}
+    assert {"primary_storage", "backup_storage"} <= {
+        column["name"] for column in inspect(engine).get_columns("media_backup_jobs")
+    }
 
 
 def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:

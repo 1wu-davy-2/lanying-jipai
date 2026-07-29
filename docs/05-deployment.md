@@ -37,7 +37,7 @@
    python3.11 -m venv venv
    ./venv/bin/pip install -r requirements.txt gunicorn uvicorn[standard]
    ```
-4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。生产环境将 `UPLOAD_STORAGE_DRIVER=cos`，填写 `COS_*` 与内部 `MINIO_*` 配置；COS 用于公网读取，MinIO 只作备份，不配置到 Nginx。
+4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。生产环境将 `UPLOAD_STORAGE_DRIVER=minio`，填写内部 `MINIO_*` 配置与 `MINIO_PUBLIC_BASE_URL`；Nginx 仅代理媒体域名到 MinIO。需要异地副本时再启用 `COS_BACKUP_ENABLED=true` 并填写 `COS_*`。
 5. 执行数据库迁移：`./venv/bin/alembic upgrade head`。
 6. 复制仓库中的 `deploy/lanying-backend.service` 到 `/etc/systemd/system/lanying-backend.service`，确认 `User`、路径和虚拟环境名称与服务器一致：
    ```ini

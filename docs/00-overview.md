@@ -28,7 +28,7 @@
 | 数据库 | MariaDB 11.4.12 | 按你现有环境确定 |
 | 鉴权 | JWT（access + refresh） | 无状态，适合前后端分离 |
 | 部署 | Nginx + Gunicorn(uvicorn worker) + systemd + Linux 云服务器 | 标准、可控、不依赖容器编排也能跑，后续可平滑迁移 Docker |
-| 文件存储 | 开发环境本地磁盘；生产环境 COS 公有读 + MinIO 私有备份 | 网页媒体由 COS/CDN 返回，MinIO 只作数据冗余 |
+| 文件存储 | 开发环境本地磁盘；生产环境 MinIO 公网媒体域名 + 可选 COS 异地备份 | 网页媒体由同机 MinIO 返回，COS 仅作可切换的冗余副本 |
 
 ## 4. 整体架构
 

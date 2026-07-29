@@ -72,6 +72,21 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "我的订单" })).toBeInTheDocument();
   });
 
+  it("renders the talent bottom navigation for the mobile workspace", () => {
+    useAuthStore.setState({
+      session: {
+        access_token: "token", refresh_token: "refresh", token_type: "bearer",
+        user: { id: 2, phone: "13800138001", role: "model", nickname: "达人" },
+      },
+    });
+    renderWithProviders("/model/orders");
+
+    const navigation = screen.getByRole("navigation", { name: "达人导航" });
+    expect(navigation).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "抢单" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "订单" })).toBeInTheDocument();
+  });
+
   it("sends an anonymous talent visitor to the talent login page", () => {
     renderWithProviders("/model/hall");
 
