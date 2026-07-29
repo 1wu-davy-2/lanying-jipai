@@ -10,6 +10,7 @@ export interface OrderItem {
   model_id: number | null;
   title: string;
   description: string;
+  product_categories: string[];
   commission_amount: string;
   deposit_amount: string;
   sample_images: string[];
@@ -44,7 +45,7 @@ interface OrderList { items: OrderItem[]; total: number; page?: number; page_siz
 export function getMyOrders(status?: OrderStatus, page = 1, pageSize = 20) {
   return request<OrderList>(client.get("/orders", { params: { status_filter: status, page, page_size: pageSize } }));
 }
-export function getOrderHall() { return request<OrderList>(client.get("/orders/hall")); }
+export function getOrderHall(category?: string) { return request<OrderList>(client.get("/orders/hall", { params: category ? { category } : undefined })); }
 export function getOrder(orderId: number) { return request<OrderDetail>(client.get(`/orders/${orderId}`)); }
 export function claimOrder(orderId: number) { return request<OrderItem>(client.post(`/orders/${orderId}/claim`)); }
 export function createOrder(values: Record<string, unknown>) { return request<OrderItem>(client.post("/orders", values)); }

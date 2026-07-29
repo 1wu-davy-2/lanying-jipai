@@ -10,6 +10,7 @@ from app.database import get_db
 from app.deps import get_current_user, require_role
 from app.models.order import Order, OrderLog, OrderMessage
 from app.models.user import User
+from app.product_categories import PRODUCT_CATEGORIES
 from app.schemas.order import (
     OrderCreateRequest,
     OrderMessageRequest,
@@ -24,6 +25,10 @@ from app.utils.order_no import new_order_no
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
+def order_categories(order: Order) -> list[str]:
+    return json.loads(order.product_categories or "[]")
+
+
 def serialize_order(order: Order) -> dict[str, object]:
     return {
         "id": order.id,
@@ -32,6 +37,7 @@ def serialize_order(order: Order) -> dict[str, object]:
         "model_id": order.model_id,
         "title": order.title,
         "description": order.description,
+        "product_categories": order_categories(order),
         "sample_images": json.loads(order.sample_images or "[]"),
         "commission_amount": str(order.commission_amount),
         "deposit_amount": str(order.deposit_amount),
@@ -90,6 +96,7 @@ def new_published_order(payload: OrderCreateRequest, merchant_id: int) -> Order:
         merchant_id=merchant_id,
         title=payload.title,
         description=payload.description,
+        product_categories=json.dumps(payload.product_categories, ensure_ascii=False),
         sample_images=json.dumps(payload.sample_images),
         commission_amount=payload.commission_amount,
         deposit_amount=payload.deposit_amount,
@@ -113,15 +120,21 @@ def create_order(
 
 @router.get("/hall")
 def order_hall(
+    category: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(require_role("model")),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
+    if category is not None and category not in PRODUCT_CATEGORIES:
+        raise HTTPException(status_code=422, detail="商品分类不支持")
     statement = select(Order).where(Order.status == "PUBLISHED").order_by(Order.created_at.desc())
-    orders = list(session.scalars(statement.offset((page - 1) * page_size).limit(page_size)))
-    total = session.scalar(select(func.count()).select_from(Order).where(Order.status == "PUBLISHED")) or 0
-    return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in orders], "total": total, "page": page, "page_size": page_size}}
+    orders = list(session.scalars(statement))
+    if category is not None:
+        orders = [order for order in orders if category in order_categories(order)]
+    total = len(orders)
+    items = orders[(page - 1) * page_size : page * page_size]
+    return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in items], "total": total, "page": page, "page_size": page_size}}
 
 
 @router.post("/{order_id}/claim")

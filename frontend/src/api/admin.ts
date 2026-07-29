@@ -36,7 +36,7 @@ export function createAdminMerchant(values: { phone: string; password: string; n
 export function updateAdminUserStatus(userId: number, status: "active" | "disabled") { return request<AdminUser>(client.put(`/admin/users/${userId}/status`, { status })); }
 export function reviewVerification(userId: number, approved: boolean, reason?: string) { return request<AdminUser>(client.put(`/admin/users/${userId}/verify`, { approved, reason })); }
 export function getAdminOrders(params: Record<string, string | number | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
-export function createAdminOrder(values: { merchant_id: number; title: string; description: string; commission_amount: string; sample_images: string[]; shoot_requirements?: string }) { return request<OrderItem>(client.post("/admin/orders", values)); }
+export function createAdminOrder(values: { merchant_id: number; title: string; description: string; product_categories: string[]; commission_amount: string; sample_images: string[]; shoot_requirements?: string }) { return request<OrderItem>(client.post("/admin/orders", values)); }
 export function shipAdminOrder(orderId: number, values: { tracking_no: string; company: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/ship`, values)); }
 export function acceptAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/accept`)); }
 export function rejectAdminOrder(orderId: number, reason: string) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/reject`, { reason })); }

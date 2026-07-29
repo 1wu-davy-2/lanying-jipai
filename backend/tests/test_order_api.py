@@ -25,7 +25,7 @@ def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
         json={
             "title": "夏季连衣裙寄拍",
             "description": "自然光拍摄",
-            "commission_amount": "168.00",
+            "product_categories": ["\u5176\u4ed6"], "commission_amount": "168.00",
             "sample_images": ["/uploads/sample.jpg"],
             "shoot_requirements": "交付 5 张精修图",
         },
@@ -59,6 +59,34 @@ def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     assert [item["to_status"] for item in detail.json()["data"]["logs"]] == [
         "CLAIMED", "SHIPPED_TO_MODEL", "IN_PROGRESS", "RETURNED", "COMPLETED"
     ]
+
+
+def test_order_categories_are_required_and_filter_the_hall() -> None:
+    client = TestClient(app)
+    merchant_headers = {"Authorization": f"Bearer {register(client, '13300000005', 'merchant')}"}
+    model_headers = {"Authorization": f"Bearer {register(client, '13300000006', 'model')}"}
+    clothing = "\u670d\u9970\u7a7f\u642d"
+    beauty = "\u7f8e\u5986\u4e2a\u62a4"
+    payload = {"title": "Category order", "description": "Category filtered order", "commission_amount": "50.00"}
+
+    clothing_order = client.post("/api/orders", headers=merchant_headers, json={**payload, "product_categories": [clothing]})
+    beauty_order = client.post("/api/orders", headers=merchant_headers, json={**payload, "title": "Beauty order", "product_categories": [beauty]})
+    assert clothing_order.status_code == 201
+    assert beauty_order.status_code == 201
+
+    filtered = client.get("/api/orders/hall", headers=model_headers, params={"category": clothing})
+    assert filtered.status_code == 200
+    assert [item["id"] for item in filtered.json()["data"]["items"]] == [clothing_order.json()["data"]["id"]]
+    assert filtered.json()["data"]["items"][0]["product_categories"] == [clothing]
+
+    missing_category = client.post("/api/orders", headers=merchant_headers, json=payload)
+    too_many_categories = client.post(
+        "/api/orders",
+        headers=merchant_headers,
+        json={**payload, "product_categories": [clothing, beauty, "\u98df\u54c1\u996e\u6599", "\u5bb6\u5c45\u751f\u6d3b"]},
+    )
+    assert missing_category.status_code == 422
+    assert too_many_categories.status_code == 422
 
 
 def test_upload_rejects_unapproved_types_and_returns_a_static_url() -> None:

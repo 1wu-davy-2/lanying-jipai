@@ -20,6 +20,7 @@ class Order(TimestampMixin, Base):
     model_id: Mapped[Optional[int]] = mapped_column(ID_TYPE, ForeignKey("users.id"), index=True, nullable=True)
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    product_categories: Mapped[str] = mapped_column(String(255), nullable=False, default='["其他"]')
     sample_images: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     commission_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     deposit_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))

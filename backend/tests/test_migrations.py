@@ -26,6 +26,7 @@ def test_initial_migration_creates_account_tables(tmp_path, monkeypatch) -> None
         "withdrawals",
         "platform_configs",
     } <= set(inspect(engine).get_table_names())
+    assert "product_categories" in {column["name"] for column in inspect(engine).get_columns("orders")}
 
 
 def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:

@@ -7,6 +7,7 @@ import { createAdminMerchant, createAdminOrder, getAdminOrders, getAdminUsers } 
 import type { OrderStatus } from "../../api/orders";
 import { OrderMediaUpload } from "../../components/OrderMediaUpload";
 import { OrderStatusTag } from "../../components/OrderStatusTag";
+import { PRODUCT_CATEGORY_OPTIONS } from "../../constants/productCategories";
 
 const tabs: { key: OrderStatus | "all"; label: string }[] = [
   { key: "all", label: "全部" },
@@ -21,6 +22,7 @@ const tabs: { key: OrderStatus | "all"; label: string }[] = [
 type PublishValues = {
   title: string;
   description: string;
+  product_categories: string[];
   commission_amount: number;
   shoot_requirements?: string;
 };
@@ -62,10 +64,10 @@ export function AdminOperationsPage() {
     if (!merchantId) return;
     setSaving(true);
     try {
-      await createAdminOrder({
-        merchant_id: merchantId,
-        ...values,
-        commission_amount: values.commission_amount.toFixed(2),
+        await createAdminOrder({
+          merchant_id: merchantId,
+          ...values,
+          commission_amount: values.commission_amount.toFixed(2),
         sample_images: sampleImages,
       });
       await Promise.all([
@@ -152,6 +154,9 @@ export function AdminOperationsPage() {
     </Modal>
     <Modal title="发布寄拍订单" open={publishOpen} onCancel={() => { setPublishOpen(false); publishForm.resetFields(); setSampleImages([]); }} footer={null} destroyOnClose>
       <Form form={publishForm} layout="vertical" onFinish={publish} requiredMark={false}>
+        <Form.Item name="product_categories" label="商品分类" rules={[{ required: true, message: "请选择至少一个商品分类" }, { type: "array", min: 1, max: 3, message: "请选择 1 至 3 个商品分类" }]}>
+          <Select mode="multiple" maxCount={3} options={PRODUCT_CATEGORY_OPTIONS} placeholder="选择 1 至 3 个分类" />
+        </Form.Item>
         <Form.Item name="title" label="订单标题" rules={[{ required: true, message: "请输入订单标题" }]}><Input maxLength={100} /></Form.Item>
         <Form.Item name="description" label="拍摄说明" rules={[{ required: true, message: "请输入拍摄说明" }]}><Input.TextArea rows={4} /></Form.Item>
         <Form.Item label="样品图片"><OrderMediaUpload value={sampleImages} onChange={setSampleImages} accept="image" /></Form.Item>

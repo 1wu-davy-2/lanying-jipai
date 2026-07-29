@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Form, Input, InputNumber, Modal, Table, Tabs, Typography, message } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Table, Tabs, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 
 import { createOrder, getMyOrders, type OrderStatus } from "../../api/orders";
 import { OrderMediaUpload } from "../../components/OrderMediaUpload";
 import { OrderStatusTag } from "../../components/OrderStatusTag";
+import { PRODUCT_CATEGORY_OPTIONS } from "../../constants/productCategories";
 
 const tabs: { key: OrderStatus | "all"; label: string }[] = [
   { key: "all", label: "全部" }, { key: "PUBLISHED", label: "待抢单" }, { key: "CLAIMED", label: "待寄出" },
@@ -22,7 +23,7 @@ export function MerchantOrdersPage() {
   const [sampleImages, setSampleImages] = useState<string[]>([]);
   const [form] = Form.useForm();
   const { data, isLoading } = useQuery({ queryKey: ["merchant-orders", status, page], queryFn: () => getMyOrders(status === "all" ? undefined : status, page) });
-  const publish = async (values: { title: string; description: string; commission_amount: number; shoot_requirements?: string }) => {
+  const publish = async (values: { title: string; description: string; product_categories: string[]; commission_amount: number; shoot_requirements?: string }) => {
     setSaving(true);
     try {
       await createOrder({ ...values, commission_amount: values.commission_amount.toFixed(2), sample_images: sampleImages });
@@ -38,6 +39,9 @@ export function MerchantOrdersPage() {
     ]} />
     <Modal title="发布寄拍订单" open={open} onCancel={() => { setOpen(false); form.resetFields(); setSampleImages([]); }} footer={null} destroyOnClose>
       <Form form={form} layout="vertical" onFinish={publish}>
+        <Form.Item name="product_categories" label="商品分类" rules={[{ required: true, message: "请选择至少一个商品分类" }, { type: "array", min: 1, max: 3, message: "请选择 1 至 3 个商品分类" }]}>
+          <Select mode="multiple" maxCount={3} options={PRODUCT_CATEGORY_OPTIONS} placeholder="选择 1 至 3 个分类" />
+        </Form.Item>
         <Form.Item name="title" label="订单标题" rules={[{ required: true, message: "请输入订单标题" }]}><Input maxLength={100} /></Form.Item>
         <Form.Item name="description" label="拍摄说明" rules={[{ required: true, message: "请输入拍摄说明" }]}><Input.TextArea rows={4} /></Form.Item>
         <Form.Item label="样品图片"><OrderMediaUpload value={sampleImages} onChange={setSampleImages} accept="image" /></Form.Item>

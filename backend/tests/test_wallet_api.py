@@ -32,7 +32,7 @@ def complete_order(client: TestClient, merchant_headers: dict[str, str], model_h
     created = client.post(
         "/api/orders",
         headers=merchant_headers,
-        json={"title": "结算测试订单", "description": "拍摄", "commission_amount": "168.00"},
+        json={"title": "结算测试订单", "description": "拍摄", "product_categories": ["\u5176\u4ed6"], "commission_amount": "168.00"},
     )
     order_id = created.json()["data"]["id"]
     assert client.post(f"/api/orders/{order_id}/claim", headers=model_headers).status_code == 200

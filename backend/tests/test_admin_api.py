@@ -22,7 +22,7 @@ def admin_headers() -> dict[str, str]:
 
 
 def create_disputed_order(client: TestClient, merchant_headers: dict[str, str], model_headers: dict[str, str]) -> int:
-    created = client.post("/api/orders", headers=merchant_headers, json={"title": "仲裁测试订单", "description": "拍摄", "commission_amount": "88.00"})
+    created = client.post("/api/orders", headers=merchant_headers, json={"title": "仲裁测试订单", "description": "拍摄", "product_categories": ["\u5176\u4ed6"], "commission_amount": "88.00"})
     order_id = created.json()["data"]["id"]
     assert client.post(f"/api/orders/{order_id}/claim", headers=model_headers).status_code == 200
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
@@ -109,7 +109,7 @@ def test_admin_can_operate_orders_for_a_selected_merchant() -> None:
     invalid_target = client.post(
         "/api/admin/orders",
         headers=admin,
-        json={"merchant_id": model["id"], "title": "错误目标", "description": "达人不能作为商家", "commission_amount": "1.00"},
+        json={"merchant_id": model["id"], "title": "错误目标", "description": "达人不能作为商家", "product_categories": ["\u5176\u4ed6"], "commission_amount": "1.00"},
     )
     assert invalid_target.status_code == 400
 
@@ -120,7 +120,7 @@ def test_admin_can_operate_orders_for_a_selected_merchant() -> None:
             "merchant_id": merchant["id"],
             "title": "运营代发测试订单",
             "description": "运营人员代商家发布",
-            "commission_amount": "100.00",
+            "product_categories": ["\u5176\u4ed6"], "commission_amount": "100.00",
         },
     )
     assert created.status_code == 201
@@ -159,6 +159,6 @@ def test_admin_can_operate_orders_for_a_selected_merchant() -> None:
     disabled_target = client.post(
         "/api/admin/orders",
         headers=admin,
-        json={"merchant_id": merchant["id"], "title": "禁用商家", "description": "不应允许代发", "commission_amount": "1.00"},
+        json={"merchant_id": merchant["id"], "title": "禁用商家", "description": "不应允许代发", "product_categories": ["\u5176\u4ed6"], "commission_amount": "1.00"},
     )
     assert disabled_target.status_code == 409
