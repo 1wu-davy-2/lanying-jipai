@@ -1,38 +1,24 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppstoreOutlined, PictureOutlined, ThunderboltOutlined } from "@ant-design/icons";
-import { Button, Empty, Image, Modal, Segmented, Skeleton, Space, Tag, Typography, message } from "antd";
+import { useQuery } from "@tanstack/react-query";
+import { AppstoreOutlined, ArrowRightOutlined, PictureOutlined } from "@ant-design/icons";
+import { Alert, Button, Empty, Image, Segmented, Skeleton, Space, Tag, Typography } from "antd";
+import { useNavigate } from "react-router-dom";
 
-import { claimOrder, getOrderHall } from "../../api/orders";
+import { getOrderHall } from "../../api/orders";
+import { getTalentStatus } from "../../api/users";
 import { PRODUCT_CATEGORIES, productCategoryColor } from "../../constants/productCategories";
 
 const ALL_CATEGORIES = "all";
 
 export function ModelHallPage() {
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const { data, isLoading } = useQuery({
     queryKey: ["order-hall", category],
     queryFn: () => getOrderHall(category === ALL_CATEGORIES ? undefined : category),
     refetchInterval: 15_000,
   });
-  const claim = async (id: number) => {
-    try {
-      await claimOrder(id);
-      await queryClient.invalidateQueries({ queryKey: ["order-hall"] });
-      message.success("抢单成功");
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : "该订单已被其他达人抢走");
-      await queryClient.invalidateQueries({ queryKey: ["order-hall"] });
-    }
-  };
-  const confirmClaim = (id: number, title: string) => Modal.confirm({
-    title: "确认抢单",
-    content: `确认接受「${title}」吗？`,
-    okText: "确认抢单",
-    cancelText: "取消",
-    onOk: () => claim(id),
-  });
+  const { data: talentStatus } = useQuery({ queryKey: ["talent-status"], queryFn: getTalentStatus });
   const categoryOptions = [
     { label: "全部", value: ALL_CATEGORIES },
     ...PRODUCT_CATEGORIES.map((item) => ({ label: item.value, value: item.value })),
@@ -41,11 +27,12 @@ export function ModelHallPage() {
   return <section className="talent-hall">
     <header className="talent-hall-heading">
       <div>
-        <Typography.Title level={2}>抢单大厅</Typography.Title>
-        <Typography.Text type="secondary">可接订单 {data?.total ?? 0}</Typography.Text>
+        <Typography.Title level={2}>接单大厅</Typography.Title>
+        <Typography.Text type="secondary">可申请订单 {data?.total ?? 0}</Typography.Text>
       </div>
       <AppstoreOutlined className="talent-hall-icon" aria-hidden="true" />
     </header>
+    {talentStatus && <Alert className="talent-claim-status" type={talentStatus.can_claim ? "success" : "warning"} showIcon message={`${talentStatus.level.name}：同时最多 ${talentStatus.level.max_active_orders} 单，单笔不超过 ¥${talentStatus.level.max_commission_amount}`} description={talentStatus.can_claim ? `已完成 ${talentStatus.completed_orders} 单，当前进行中 ${talentStatus.active_orders} 单。` : talentStatus.profile_complete ? "实名认证审核通过后可正式接单。" : "请先在“我的”完成头像、用户名、收货地区和至少 6 张作品照片。"} />}
     <div className="hall-category-filter" aria-label="商品分类筛选">
       <Segmented value={category} options={categoryOptions} onChange={(value) => setCategory(String(value))} />
     </div>
@@ -60,8 +47,9 @@ export function ModelHallPage() {
             <div className="talent-order-meta"><Space size={[4, 4]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}</Space><strong>¥{order.commission_amount}</strong></div>
             <Typography.Title level={4} ellipsis={{ rows: 2 }}>{order.title}</Typography.Title>
             <Typography.Paragraph ellipsis={{ rows: 2 }} className="talent-order-description">{order.description}</Typography.Paragraph>
+            <div className="talent-order-facts"><span>{order.quantity} 件样品</span><span>{order.required_media_count} 份素材</span><span>{order.delivery_days} 天交付</span></div>
             <Typography.Text className="talent-order-requirement" ellipsis>{order.shoot_requirements || "按订单要求交付素材"}</Typography.Text>
-            <Button type="primary" block icon={<ThunderboltOutlined />} onClick={() => confirmClaim(order.id, order.title)}>抢单</Button>
+            <Button type="primary" block icon={<ArrowRightOutlined />} onClick={() => navigate(`/model/hall/${order.id}`)}>{order.application_status === "PENDING" ? "查看申请" : "查看详情并申请"}</Button>
           </div>
         </article>;
       })}</div> : <Empty description="该分类暂无可接订单" />}

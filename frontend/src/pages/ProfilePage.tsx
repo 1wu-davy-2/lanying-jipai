@@ -1,26 +1,57 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Col, Form, Input, InputNumber, Row, Skeleton, Tag, Typography, message } from "antd";
+import { Alert, Avatar, Button, Card, Col, Descriptions, Form, Image, Input, Row, Skeleton, Space, Tag, Typography, message } from "antd";
 
-import { getCurrentUser, saveMerchantProfile, saveModelProfile, submitVerification } from "../api/users";
+import { addressFromPath, addressToPath } from "../constants/shippingAddresses";
+import { getCurrentUser, saveCurrentUser, saveMerchantProfile, saveModelProfile, submitVerification } from "../api/users";
+import { getTalentStatus } from "../api/users";
 import type { UserRole } from "../types";
+import { TalentProfileFields } from "../components/TalentProfileFields";
 
 export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "model"> }) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["current-user"], queryFn: getCurrentUser });
+  const { data: talentStatus } = useQuery({ queryKey: ["talent-status"], queryFn: getTalentStatus, enabled: role === "model" });
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [profileForm] = Form.useForm();
   const [verifyForm] = Form.useForm();
 
   useEffect(() => {
     if (!data) return;
-    profileForm.setFieldsValue(role === "merchant" ? data.merchant_profile : data.model_profile);
+    if (role === "merchant") {
+      profileForm.setFieldsValue(data.merchant_profile);
+      return;
+    }
+    profileForm.setFieldsValue({
+      nickname: data.nickname,
+      avatar_url: data.avatar_url ?? undefined,
+      ...data.model_profile,
+      receive_address: addressToPath(data.model_profile?.receive_address),
+      portfolio_urls: data.model_profile?.portfolio_urls ?? [],
+    });
+    const profile = data.model_profile;
+    setEditing(!Boolean(data.nickname && data.avatar_url && profile?.receive_address && profile?.receiver_name && profile?.receiver_phone && profile?.receive_address_detail && (profile.portfolio_urls?.length ?? 0) >= 6));
   }, [data, profileForm, role]);
 
   const saveProfile = async (values: Record<string, unknown>) => {
     setSaving(true);
     try {
-      await (role === "merchant" ? saveMerchantProfile(values) : saveModelProfile(values));
+      if (role === "merchant") {
+        await saveMerchantProfile(values);
+      } else {
+        await saveCurrentUser({ nickname: values.nickname as string, avatar_url: values.avatar_url as string });
+        await saveModelProfile({
+          height_cm: values.height_cm,
+          weight_kg: values.weight_kg,
+          skill_tags: values.skill_tags,
+          receive_address: addressFromPath(values.receive_address as string[]),
+          receiver_name: values.receiver_name,
+          receiver_phone: values.receiver_phone,
+          receive_address_detail: values.receive_address_detail,
+          portfolio_urls: values.portfolio_urls,
+        });
+      }
       await queryClient.invalidateQueries({ queryKey: ["current-user"] });
       message.success("资料已保存");
     } catch (error) {
@@ -36,7 +67,7 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
       await submitVerification(values);
       await queryClient.invalidateQueries({ queryKey: ["current-user"] });
       verifyForm.resetFields();
-      message.success("认证资料已提交");
+      message.success("认证资料已提交，审核通过后即可正式接单");
     } catch (error) {
       message.error(error instanceof Error ? error.message : "提交失败");
     } finally {
@@ -45,30 +76,55 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
   };
 
   const title = role === "merchant" ? "店铺资料" : "个人资料";
-  return (
-    <div className="profile-page">
-      <div className="page-heading"><Typography.Title level={2}>{title}</Typography.Title><Tag color={data?.verify_status === "verified" ? "success" : "gold"}>{data?.verify_status === "verified" ? "已认证" : "待认证"}</Tag></div>
-      {isLoading ? <Skeleton active /> : <Row gutter={[20, 20]}>
-        <Col xs={24} lg={14}>
-          <Card title={role === "merchant" ? "店铺信息" : "接单信息"} className="content-card">
-            <Form form={profileForm} layout="vertical" onFinish={saveProfile} requiredMark={false}>
-              {role === "merchant" ? <><Form.Item name="shop_name" label="店铺名称" rules={[{ required: true, message: "请输入店铺名称" }]}><Input /></Form.Item><Form.Item name="shop_platform" label="电商平台"><Input /></Form.Item><Form.Item name="contact_phone" label="联系电话" rules={[{ required: true, message: "请输入联系电话" }]}><Input /></Form.Item><Form.Item name="default_ship_address" label="默认寄件地址" rules={[{ required: true, message: "请输入默认寄件地址" }]}><Input.TextArea rows={3} /></Form.Item></> : <><Row gutter={12}><Col span={12}><Form.Item name="height_cm" label="身高（cm）"><InputNumber min={1} max={300} className="field-full" /></Form.Item></Col><Col span={12}><Form.Item name="weight_kg" label="体重（kg）"><InputNumber min={1} max={500} className="field-full" /></Form.Item></Col></Row><Form.Item name="skill_tags" label="技能标签"><Input placeholder="例如：模特, 摄影, 美甲" /></Form.Item><Form.Item name="receive_address" label="收货地址" rules={[{ required: true, message: "请输入收货地址" }]}><Input.TextArea rows={3} /></Form.Item><Form.Item name="portfolio_urls" label="作品集链接"><Input.TextArea rows={2} /></Form.Item></>}
-              <Button type="primary" htmlType="submit" loading={saving}>保存资料</Button>
-            </Form>
-          </Card>
-        </Col>
-        <Col xs={24} lg={10}>
-          <Card title="实名认证" className="content-card">
-            <Form form={verifyForm} layout="vertical" onFinish={verify} requiredMark={false}>
-              <Form.Item name="real_name" label="真实姓名" rules={[{ required: true, message: "请输入真实姓名" }]}><Input /></Form.Item>
-              <Form.Item name="id_card_no" label="身份证号" rules={[{ required: true, message: "请输入身份证号" }]}><Input /></Form.Item>
-              <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input /></Form.Item>
-              <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
-              <Button htmlType="submit" loading={saving}>提交认证</Button>
-            </Form>
-          </Card>
-        </Col>
-      </Row>}
-    </div>
-  );
+  const verified = data?.verify_status === "verified";
+  const verificationPanel = <Card title="实名认证" className="content-card">
+    {data?.verify_status === "pending" ? <Alert type="info" showIcon message="实名认证审核中" description="审核通过后即可正式接单。" /> : <>
+      {data?.verify_status === "rejected" && <Alert type="error" showIcon message="认证被驳回" description={data.verify_reject_reason || "请核对资料后重新提交"} />}
+      {data?.verify_status !== "verified" && <Form form={verifyForm} layout="vertical" onFinish={verify} requiredMark={false}>
+        <Form.Item name="real_name" label="真实姓名" rules={[{ required: true, message: "请输入真实姓名" }]}><Input /></Form.Item>
+        <Form.Item name="id_card_no" label="身份证号" rules={[{ required: true, message: "请输入身份证号" }]}><Input /></Form.Item>
+        <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input /></Form.Item>
+        <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
+        <Button htmlType="submit" loading={saving}>提交认证</Button>
+      </Form>}
+      {data?.verify_status === "verified" && <Alert type="success" showIcon message="已完成实名认证" description="你的资料已满足接单认证要求。" />}
+    </>}
+  </Card>;
+  return <div className="profile-page">
+    <div className="page-heading"><Typography.Title level={2}>{title}</Typography.Title><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag>{role === "model" && !editing && <Button onClick={() => setEditing(true)}>编辑资料</Button>}</div>
+    {isLoading ? <Skeleton active /> : role === "model" && !editing && data ? <Row gutter={[20, 20]}>
+      <Col xs={24} lg={15}>
+        <section className="talent-profile-overview">
+          <div className="talent-profile-hero">
+            <Avatar size={88} src={data.avatar_url}>{data.nickname.slice(0, 1)}</Avatar>
+            <div><Typography.Title level={3}>{data.nickname}</Typography.Title><Space wrap><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag><Tag color="cyan">{talentStatus?.level.code || "L1"} {talentStatus?.level.name || "新星达人"}</Tag></Space></div>
+          </div>
+          <div className="talent-profile-stats"><div><strong>{talentStatus?.completed_orders ?? 0}</strong><span>已完成订单</span></div><div><strong>{talentStatus?.active_orders ?? 0}</strong><span>进行中订单</span></div><div><strong>¥{talentStatus?.level.max_commission_amount ?? "300"}</strong><span>单笔接单上限</span></div></div>
+          <Descriptions column={{ xs: 1, sm: 2 }} size="small" labelStyle={{ color: "#718083" }}>
+            <Descriptions.Item label="身高 / 体重">{data.model_profile?.height_cm || "-"} cm / {data.model_profile?.weight_kg || "-"} kg</Descriptions.Item>
+            <Descriptions.Item label="擅长标签">{data.model_profile?.skill_tags || "未填写"}</Descriptions.Item>
+            <Descriptions.Item label="收件人">{data.model_profile?.receiver_name} · {data.model_profile?.receiver_phone}</Descriptions.Item>
+            <Descriptions.Item label="收货地址">{data.model_profile?.receive_address} {data.model_profile?.receive_address_detail}</Descriptions.Item>
+          </Descriptions>
+          <div className="talent-profile-portfolio"><Typography.Title level={4}>作品集</Typography.Title><Image.PreviewGroup>{(data.model_profile?.portfolio_urls ?? []).map((url) => <Image key={url} src={url} alt="达人作品" />)}</Image.PreviewGroup></div>
+        </section>
+      </Col>
+      <Col xs={24} lg={9}>{verificationPanel}</Col>
+    </Row> : <Row gutter={[20, 20]}>
+      <Col xs={24} lg={14}>
+        <Card title={role === "merchant" ? "店铺信息" : "接单资料"} className="content-card">
+          <Form form={profileForm} layout="vertical" onFinish={saveProfile} requiredMark={false}>
+            {role === "merchant" ? <>
+              <Form.Item name="shop_name" label="店铺名称" rules={[{ required: true, message: "请输入店铺名称" }]}><Input /></Form.Item>
+              <Form.Item name="shop_platform" label="电商平台"><Input /></Form.Item>
+              <Form.Item name="contact_phone" label="联系电话" rules={[{ required: true, message: "请输入联系电话" }]}><Input /></Form.Item>
+              <Form.Item name="default_ship_address" label="默认寄件地址" rules={[{ required: true, message: "请输入默认寄件地址" }]}><Input.TextArea rows={3} /></Form.Item>
+            </> : <TalentProfileFields />}
+            <Space><Button type="primary" htmlType="submit" loading={saving}>保存资料</Button>{role === "model" && <Button onClick={() => setEditing(false)}>取消</Button>}</Space>
+          </Form>
+        </Card>
+      </Col>
+      <Col xs={24} lg={10}>{verificationPanel}</Col>
+    </Row>}
+  </div>;
 }

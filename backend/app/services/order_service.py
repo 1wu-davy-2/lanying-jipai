@@ -5,7 +5,9 @@ from sqlalchemy import update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from app.models.order import Order, OrderLog
+from app.models.order import Order, OrderApplication, OrderLog
+from app.models.user import User
+from app.services.talent_level import claim_block_reason
 
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "DRAFT": {"PUBLISHED"},
@@ -79,3 +81,54 @@ def claim_order(session: Session, order_id: int, model_id: int) -> None:
     except OperationalError as exc:
         session.rollback()
         raise OrderConflictError("该订单已被抢走或不可抢") from exc
+
+
+def approve_order_application(session: Session, application: OrderApplication, reviewer_id: int) -> None:
+    """Assign a published order exactly once while accepting the selected application."""
+    if application.status != "PENDING":
+        raise OrderConflictError("该申请已处理")
+    order = session.get(Order, application.order_id)
+    if order is None or order.status != "PUBLISHED":
+        raise OrderConflictError("订单已分配或不可审核")
+    applicant = session.get(User, application.model_id)
+    if applicant is None:
+        raise OrderConflictError("申请达人不存在")
+    reason = claim_block_reason(session, applicant, order.commission_amount)
+    if reason:
+        raise OrderConflictError(reason)
+
+    now = datetime.now(timezone.utc)
+    try:
+        result = session.execute(
+            update(Order)
+            .where(Order.id == order.id, Order.status == "PUBLISHED")
+            .values(status="CLAIMED", model_id=application.model_id, claimed_at=now, updated_at=now)
+        )
+        if result.rowcount != 1:
+            raise OrderConflictError("订单已分配或不可审核")
+        application_result = session.execute(
+            update(OrderApplication)
+            .where(OrderApplication.id == application.id, OrderApplication.status == "PENDING")
+            .values(status="APPROVED", reviewer_id=reviewer_id, reviewed_at=now, review_reason="运营审核通过")
+        )
+        if application_result.rowcount != 1:
+            raise OrderConflictError("该申请已处理")
+        session.execute(
+            update(OrderApplication)
+            .where(OrderApplication.order_id == order.id, OrderApplication.id != application.id, OrderApplication.status == "PENDING")
+            .values(status="REJECTED", reviewer_id=reviewer_id, reviewed_at=now, review_reason="订单已分配给其他达人")
+        )
+        session.add(
+            OrderLog(
+                order_id=order.id,
+                operator_id=reviewer_id,
+                from_status="PUBLISHED",
+                to_status="CLAIMED",
+                remark="运营审核通过达人申请并分配订单",
+            )
+        )
+        session.expire(order)
+        session.expire(application)
+    except OperationalError as exc:
+        session.rollback()
+        raise OrderConflictError("订单已分配或不可审核") from exc

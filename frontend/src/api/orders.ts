@@ -2,6 +2,8 @@ import { client, request } from "./client";
 import type { UserRole } from "../types";
 
 export type OrderStatus = "DRAFT" | "PUBLISHED" | "CLAIMED" | "SHIPPED_TO_MODEL" | "IN_PROGRESS" | "RETURNED" | "COMPLETED" | "DISPUTED" | "CANCELLED";
+export type OrderType = "product_photo" | "try_on" | "short_video" | "live_show";
+export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface OrderItem {
   id: number;
@@ -14,6 +16,12 @@ export interface OrderItem {
   commission_amount: string;
   deposit_amount: string;
   sample_images: string[];
+  order_type: OrderType;
+  quantity: number;
+  required_media_count: number;
+  delivery_days: number;
+  deposit_required: boolean;
+  return_required: boolean;
   shoot_requirements: string | null;
   status: OrderStatus;
   ship_to_model_tracking_no: string | null;
@@ -23,6 +31,7 @@ export interface OrderItem {
   submitted_media: string[];
   reject_reason: string | null;
   created_at: string | null;
+  application_status?: ApplicationStatus | null;
 }
 
 export interface OrderLog {
@@ -37,7 +46,23 @@ export interface OrderLog {
 
 export interface OrderDetail extends OrderItem {
   logs: OrderLog[];
-  merchant: { id: number; nickname: string; phone: string } | null;
+  merchant: { id: number; nickname: string; phone?: string; avatar_url?: string | null; shop_name?: string; shop_platform?: string | null } | null;
+  application_reason?: string | null;
+}
+
+export interface MarketplaceOrder extends OrderItem {
+  merchant: { id: number; nickname: string; avatar_url?: string | null; shop_name?: string; shop_platform?: string | null } | null;
+  application_reason?: string | null;
+}
+
+export interface OrderApplication {
+  id: number;
+  order_id?: number;
+  status: ApplicationStatus;
+  message: string | null;
+  review_reason?: string | null;
+  created_at: string | null;
+  order?: OrderItem;
 }
 
 interface OrderList { items: OrderItem[]; total: number; page?: number; page_size?: number; }
@@ -46,8 +71,10 @@ export function getMyOrders(status?: OrderStatus, page = 1, pageSize = 20) {
   return request<OrderList>(client.get("/orders", { params: { status_filter: status, page, page_size: pageSize } }));
 }
 export function getOrderHall(category?: string) { return request<OrderList>(client.get("/orders/hall", { params: category ? { category } : undefined })); }
+export function getHallOrder(orderId: number) { return request<MarketplaceOrder>(client.get(`/orders/hall/${orderId}`)); }
 export function getOrder(orderId: number) { return request<OrderDetail>(client.get(`/orders/${orderId}`)); }
-export function claimOrder(orderId: number) { return request<OrderItem>(client.post(`/orders/${orderId}/claim`)); }
+export function applyForOrder(orderId: number, message?: string) { return request<OrderApplication>(client.post(`/orders/${orderId}/applications`, { message })); }
+export function getMyApplications() { return request<{ items: OrderApplication[]; total: number }>(client.get("/orders/my-applications")); }
 export function createOrder(values: Record<string, unknown>) { return request<OrderItem>(client.post("/orders", values)); }
 export function shipOrder(orderId: number, values: { tracking_no: string; company: string }) { return request<OrderItem>(client.put(`/orders/${orderId}/ship`, values)); }
 export function receiveOrder(orderId: number) { return request<OrderItem>(client.put(`/orders/${orderId}/receive`)); }

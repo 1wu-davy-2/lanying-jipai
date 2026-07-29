@@ -2,21 +2,96 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import require_role
-from app.models.order import Order, OrderLog
+from app.models.order import Order, OrderApplication, OrderLog
 from app.models.user import User
 from app.models.wallet import Withdrawal
 from app.routers.orders import get_order, new_published_order, serialize_order
-from app.schemas.order import AdminOrderCreateRequest, ArbitrationRequest, RejectOrderRequest, ShipmentRequest
-from app.services.order_service import OrderConflictError, transition_order
+from app.schemas.order import AdminOrderCreateRequest, ApplicationReviewRequest, ArbitrationRequest, RejectOrderRequest, ShipmentRequest
+from app.services.order_service import OrderConflictError, approve_order_application, transition_order
+from app.services.talent_level import talent_status
 from app.services.wallet_service import WalletConflictError, complete_order_and_settle
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def serialize_application(application: OrderApplication, session: Session) -> dict[str, object]:
+    applicant = session.get(User, application.model_id)
+    order = session.get(Order, application.order_id)
+    return {
+        "id": application.id,
+        "status": application.status,
+        "message": application.message,
+        "review_reason": application.review_reason,
+        "created_at": application.created_at.isoformat() if application.created_at else None,
+        "reviewed_at": application.reviewed_at.isoformat() if application.reviewed_at else None,
+        "applicant": None if applicant is None else {
+            "id": applicant.id,
+            "nickname": applicant.nickname,
+            "avatar_url": applicant.avatar_url,
+            "verify_status": applicant.verify_status,
+            "level": talent_status(session, applicant)["level"]["code"],
+        },
+        "order": serialize_order(order) if order else None,
+    }
+
+
+@router.get("/order-applications")
+def list_order_applications(
+    status_filter: str | None = Query(default=None, alias="status"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    statement = select(OrderApplication)
+    if status_filter:
+        statement = statement.where(OrderApplication.status == status_filter)
+    total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
+    applications = list(session.scalars(statement.order_by(OrderApplication.created_at.asc(), OrderApplication.id.asc()).offset((page - 1) * page_size).limit(page_size)))
+    return {"code": 0, "message": "ok", "data": {"items": [serialize_application(item, session) for item in applications], "total": total, "page": page, "page_size": page_size}}
+
+
+@router.put("/order-applications/{application_id}/review")
+def review_order_application(
+    application_id: int,
+    payload: ApplicationReviewRequest,
+    admin: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    application = session.get(OrderApplication, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="申请记录不存在")
+    if application.status != "PENDING":
+        raise HTTPException(status_code=409, detail="该申请已处理")
+    try:
+        if payload.approved:
+            approve_order_application(session, application, admin.id)
+        else:
+            result = session.execute(
+                update(OrderApplication)
+                .where(OrderApplication.id == application.id, OrderApplication.status == "PENDING")
+                .values(
+                    status="REJECTED",
+                    reviewer_id=admin.id,
+                    reviewed_at=datetime.now(timezone.utc),
+                    review_reason=payload.reason.strip() if payload.reason else None,
+                )
+            )
+            if result.rowcount != 1:
+                raise OrderConflictError("该申请已处理")
+            session.expire(application)
+        session.commit()
+        session.refresh(application)
+    except OrderConflictError as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"code": 0, "message": "审核完成", "data": serialize_application(application, session)}
 
 
 def orders_page(

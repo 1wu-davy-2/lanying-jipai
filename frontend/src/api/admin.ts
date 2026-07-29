@@ -1,5 +1,5 @@
 import { client, request } from "./client";
-import type { OrderItem } from "./orders";
+import type { ApplicationStatus, OrderItem } from "./orders";
 import type { Withdrawal } from "./wallets";
 
 export interface Page<T> { items: T[]; total: number; page: number; page_size: number; }
@@ -30,13 +30,26 @@ export interface DashboardSummary {
   disputed_orders: number;
 }
 
+export interface AdminOrderApplication {
+  id: number;
+  status: ApplicationStatus;
+  message: string | null;
+  review_reason: string | null;
+  created_at: string | null;
+  reviewed_at: string | null;
+  applicant: { id: number; nickname: string; avatar_url: string | null; verify_status: string; level: string } | null;
+  order: OrderItem | null;
+}
+
 export function getDashboard() { return request<DashboardSummary>(client.get("/admin/dashboard/summary")); }
 export function getAdminUsers(params: Record<string, string | undefined> = {}) { return request<Page<AdminUser>>(client.get("/admin/users", { params })); }
 export function createAdminMerchant(values: { phone: string; password: string; nickname?: string; shop_name: string; shop_platform?: string; contact_phone: string; default_ship_address: string }) { return request<AdminUser>(client.post("/admin/users/merchants", values)); }
 export function updateAdminUserStatus(userId: number, status: "active" | "disabled") { return request<AdminUser>(client.put(`/admin/users/${userId}/status`, { status })); }
 export function reviewVerification(userId: number, approved: boolean, reason?: string) { return request<AdminUser>(client.put(`/admin/users/${userId}/verify`, { approved, reason })); }
 export function getAdminOrders(params: Record<string, string | number | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
-export function createAdminOrder(values: { merchant_id: number; title: string; description: string; product_categories: string[]; commission_amount: string; sample_images: string[]; shoot_requirements?: string }) { return request<OrderItem>(client.post("/admin/orders", values)); }
+export function createAdminOrder(values: Record<string, unknown>) { return request<OrderItem>(client.post("/admin/orders", values)); }
+export function getAdminOrderApplications(status?: ApplicationStatus) { return request<Page<AdminOrderApplication>>(client.get("/admin/order-applications", { params: status ? { status } : undefined })); }
+export function reviewOrderApplication(applicationId: number, values: { approved: boolean; reason?: string }) { return request<AdminOrderApplication>(client.put(`/admin/order-applications/${applicationId}/review`, values)); }
 export function shipAdminOrder(orderId: number, values: { tracking_no: string; company: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/ship`, values)); }
 export function acceptAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/accept`)); }
 export function rejectAdminOrder(orderId: number, reason: string) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/reject`, { reason })); }

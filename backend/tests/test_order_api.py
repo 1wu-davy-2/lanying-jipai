@@ -2,8 +2,12 @@ from io import BytesIO
 
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import select
 
 from app.main import app
+from app.database import get_session_factory
+from app.models.user import User
+from app.security import create_access_token, hash_password
 
 
 def register(client: TestClient, phone: str, role: str) -> str:
@@ -14,10 +18,42 @@ def register(client: TestClient, phone: str, role: str) -> str:
     return response.json()["data"]["access_token"]
 
 
+def make_model_eligible(client: TestClient, token: str, phone: str) -> None:
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.put("/api/users/me", headers=headers, json={"nickname": "测试达人", "avatar_url": "/uploads/avatar.jpg"}).status_code == 200
+    assert client.put(
+        "/api/users/me/model-profile",
+        headers=headers,
+        json={
+            "receive_address": "北京市 / 北京市 / 朝阳区",
+            "receiver_name": "测试达人",
+            "receiver_phone": phone,
+            "receive_address_detail": "蓝影花园 1 栋 101 室",
+            "portfolio_urls": [f"/uploads/portfolio-{index}.jpg" for index in range(6)],
+        },
+    ).status_code == 200
+    with get_session_factory()() as session:
+        user = session.scalar(select(User).where(User.phone == phone))
+        assert user is not None
+        user.verify_status = "verified"
+        session.commit()
+
+
+def admin_headers() -> dict[str, str]:
+    with get_session_factory()() as session:
+        admin = User(phone="13300000009", password_hash=hash_password("secure-password"), role="admin", nickname="管理员")
+        session.add(admin)
+        session.commit()
+        session.refresh(admin)
+        return {"Authorization": f"Bearer {create_access_token(admin.id)}"}
+
+
 def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     client = TestClient(app)
     merchant_headers = {"Authorization": f"Bearer {register(client, '13300000001', 'merchant')}"}
     model_headers = {"Authorization": f"Bearer {register(client, '13300000002', 'model')}"}
+    admin = admin_headers()
+    make_model_eligible(client, model_headers["Authorization"].removeprefix("Bearer "), "13300000002")
 
     created = client.post(
         "/api/orders",
@@ -37,7 +73,9 @@ def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     assert hall.status_code == 200
     assert hall.json()["data"]["total"] == 1
 
-    assert client.post(f"/api/orders/{order_id}/claim", headers=model_headers).status_code == 200
+    assert client.post(f"/api/orders/{order_id}/applications", headers=model_headers, json={"message": "可以按时交付"}).status_code == 201
+    application = client.get("/api/admin/order-applications", headers=admin, params={"status": "PENDING"}).json()["data"]["items"][0]
+    assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
     assert client.put(

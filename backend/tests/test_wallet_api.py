@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from threading import Barrier
@@ -19,6 +20,21 @@ def register(client: TestClient, phone: str, role: str) -> str:
     return response.json()["data"]["access_token"]
 
 
+def make_model_eligible(phone: str) -> None:
+    with get_session_factory()() as session:
+        model = session.scalar(select(User).where(User.phone == phone))
+        assert model is not None and model.model_profile is not None
+        model.nickname = "测试达人"
+        model.avatar_url = "/uploads/avatar.jpg"
+        model.verify_status = "verified"
+        model.model_profile.receive_address = "北京市 / 北京市 / 朝阳区"
+        model.model_profile.receiver_name = "测试达人"
+        model.model_profile.receiver_phone = phone
+        model.model_profile.receive_address_detail = "蓝影花园 1 栋 101 室"
+        model.model_profile.portfolio_urls = json.dumps([f"/uploads/{index}.jpg" for index in range(6)])
+        session.commit()
+
+
 def admin_headers() -> dict[str, str]:
     with get_session_factory()() as session:
         admin = User(phone="13900000001", password_hash=hash_password("secure-password"), role="admin", nickname="管理员")
@@ -28,14 +44,17 @@ def admin_headers() -> dict[str, str]:
         return {"Authorization": f"Bearer {create_access_token(admin.id)}"}
 
 
-def complete_order(client: TestClient, merchant_headers: dict[str, str], model_headers: dict[str, str]) -> int:
+def complete_order(client: TestClient, merchant_headers: dict[str, str], model_headers: dict[str, str], admin: dict[str, str]) -> int:
     created = client.post(
         "/api/orders",
         headers=merchant_headers,
         json={"title": "结算测试订单", "description": "拍摄", "product_categories": ["\u5176\u4ed6"], "commission_amount": "168.00"},
     )
     order_id = created.json()["data"]["id"]
-    assert client.post(f"/api/orders/{order_id}/claim", headers=model_headers).status_code == 200
+    assert client.post(f"/api/orders/{order_id}/applications", headers=model_headers, json={"message": "申请结算测试订单"}).status_code == 201
+    applications = client.get("/api/admin/order-applications", headers=admin, params={"status": "PENDING"}).json()["data"]["items"]
+    application = next(item for item in applications if item["order"]["id"] == order_id)
+    assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
     assert client.put(
@@ -50,9 +69,11 @@ def complete_order(client: TestClient, merchant_headers: dict[str, str], model_h
 def test_order_settlement_and_withdrawal_lifecycle() -> None:
     client = TestClient(app)
     merchant_headers = {"Authorization": f"Bearer {register(client, '13900000002', 'merchant')}"}
-    model_headers = {"Authorization": f"Bearer {register(client, '13900000003', 'model')}"}
+    model_token = register(client, "13900000003", "model")
+    make_model_eligible("13900000003")
+    model_headers = {"Authorization": f"Bearer {model_token}"}
     admin = admin_headers()
-    order_id = complete_order(client, merchant_headers, model_headers)
+    order_id = complete_order(client, merchant_headers, model_headers, admin)
 
     wallet = client.get("/api/wallets/me", headers=model_headers)
     assert wallet.status_code == 200

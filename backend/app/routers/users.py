@@ -1,9 +1,13 @@
+import json
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_role
+from app.models.order import Order
 from app.models.user import MerchantProfile, ModelProfile, User
 from app.schemas.user import (
     AdminMerchantCreateRequest,
@@ -15,6 +19,7 @@ from app.schemas.user import (
     UserStatusUpdateRequest,
 )
 from app.security import decrypt_sensitive, encrypt_sensitive, hash_password, mask_id_card
+from app.services.talent_level import TALENT_LEVELS, parse_portfolio_urls, talent_level_for_completed_orders, talent_status
 
 router = APIRouter(prefix="/users", tags=["users"])
 admin_router = APIRouter(prefix="/admin/users", tags=["admin users"])
@@ -51,7 +56,10 @@ def serialize_user(user: User, include_payment_details: bool = True) -> dict[str
             "shoe_size": user.model_profile.shoe_size,
             "skill_tags": user.model_profile.skill_tags,
             "receive_address": user.model_profile.receive_address,
-            "portfolio_urls": user.model_profile.portfolio_urls,
+            "receiver_name": user.model_profile.receiver_name,
+            "receiver_phone": user.model_profile.receiver_phone,
+            "receive_address_detail": user.model_profile.receive_address_detail,
+            "portfolio_urls": parse_portfolio_urls(user.model_profile.portfolio_urls),
         }
     return data
 
@@ -59,6 +67,47 @@ def serialize_user(user: User, include_payment_details: bool = True) -> dict[str
 @router.get("/me")
 def read_me(current_user: User = Depends(get_current_user)) -> dict[str, object]:
     return {"code": 0, "message": "ok", "data": serialize_user(current_user)}
+
+
+@router.get("/me/talent-status")
+def read_talent_status(
+    current_user: User = Depends(require_role("model")), session: Session = Depends(get_db)
+) -> dict[str, object]:
+    return {"code": 0, "message": "ok", "data": talent_status(session, current_user)}
+
+
+@router.get("/model-ranking")
+def model_ranking(
+    _: User = Depends(require_role("model")), session: Session = Depends(get_db)
+) -> dict[str, object]:
+    completed = func.coalesce(func.sum(case((Order.status == "COMPLETED", 1), else_=0)), 0).label("completed_orders")
+    earnings = func.coalesce(func.sum(case((Order.status == "COMPLETED", Order.commission_amount), else_=0)), Decimal("0")).label("earnings")
+    stats = select(Order.model_id.label("model_id"), completed, earnings).group_by(Order.model_id).subquery()
+    rows = session.execute(
+        select(User, func.coalesce(stats.c.completed_orders, 0), func.coalesce(stats.c.earnings, Decimal("0")))
+        .outerjoin(stats, stats.c.model_id == User.id)
+        .where(User.role == "model", User.verify_status == "verified")
+        .order_by(stats.c.completed_orders.desc(), stats.c.earnings.desc(), User.id.asc())
+        .limit(20)
+    ).all()
+    real = [
+        {
+            "rank": index,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+            "level": talent_level_for_completed_orders(int(completed_orders)).name,
+            "completed_orders": int(completed_orders),
+            "earnings": str(earnings_amount),
+            "is_simulated": False,
+        }
+        for index, (user, completed_orders, earnings_amount) in enumerate(rows, start=1)
+    ]
+    simulated = [
+        {"rank": 1, "nickname": "星野", "level": TALENT_LEVELS[4].name, "completed_orders": 286, "earnings": "186420.00", "is_simulated": True},
+        {"rank": 2, "nickname": "林汐", "level": TALENT_LEVELS[3].name, "completed_orders": 94, "earnings": "78200.00", "is_simulated": True},
+        {"rank": 3, "nickname": "苏棠", "level": TALENT_LEVELS[3].name, "completed_orders": 71, "earnings": "54680.00", "is_simulated": True},
+    ]
+    return {"code": 0, "message": "ok", "data": {"simulated": simulated, "real": real}}
 
 
 @router.put("/me")
@@ -96,7 +145,9 @@ def update_model_profile(
     if profile is None:
         profile = ModelProfile(user=current_user)
         session.add(profile)
-    for name, value in payload.model_dump().items():
+    values = payload.model_dump()
+    values["portfolio_urls"] = json.dumps(values["portfolio_urls"])
+    for name, value in values.items():
         setattr(profile, name, value)
     session.commit()
     return {"code": 0, "message": "ok", "data": serialize_user(current_user)}
@@ -108,6 +159,8 @@ def submit_verification(
     current_user: User = Depends(require_role("merchant", "model")),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
+    if current_user.role == "model" and not talent_status(session, current_user)["profile_complete"]:
+        raise HTTPException(status_code=409, detail="请先完成头像、用户名、收货地区和至少 6 张作品照片")
     current_user.real_name = payload.real_name
     current_user.id_card_no = encrypt_sensitive(payload.id_card_no)
     current_user.alipay_account = payload.alipay_account

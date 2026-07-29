@@ -73,8 +73,49 @@ body { margin: 0; min-width: 320px; }
 .talent-order-body h4.ant-typography { margin: 0; }
 .talent-order-description { min-height: 44px; margin: 0 !important; color: #506164; }
 .talent-order-requirement { min-height: 20px; color: #6a787a; }
+.talent-order-facts { display: flex; flex-wrap: wrap; gap: 6px 12px; color: #627173; font-size: 12px; }
+.talent-order-facts span::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: 0 5px 2px 0; border-radius: 50%; background: #0f766e; }
 .talent-order-body .ant-btn { margin-top: auto; }
 .talent-order-skeleton { min-height: 344px; padding: 18px; }
+.marketplace-detail { max-width: 1120px; margin: 0 auto; }
+.marketplace-back { margin: 0 0 16px -8px; }
+.marketplace-detail-layout { display: grid; grid-template-columns: minmax(340px, 1.1fr) minmax(320px, .9fr); gap: 36px; padding-bottom: 32px; border-bottom: 1px solid #dce8e4; }
+.marketplace-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-content: start; }
+.marketplace-gallery .ant-image { display: block; width: 100%; aspect-ratio: 1; overflow: hidden; background: #edf4f2; }
+.marketplace-gallery .ant-image:first-child { grid-column: span 4; aspect-ratio: 4 / 3; }
+.marketplace-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.marketplace-empty-media { display: grid; grid-column: span 4; aspect-ratio: 4 / 3; place-content: center; gap: 10px; background: #edf4f2; color: #537175; }
+.marketplace-empty-media .anticon { margin: 0 auto; font-size: 32px; }
+.marketplace-summary h2.ant-typography { margin: 12px 0 20px; }
+.marketplace-reward { display: flex; align-items: baseline; gap: 12px; padding: 14px 0; border-top: 1px solid #edf0ef; border-bottom: 1px solid #edf0ef; }
+.marketplace-reward span { color: #718083; }
+.marketplace-reward strong { color: #c2410c; font-size: 30px; }
+.marketplace-spec-grid { display: grid; grid-template-columns: repeat(2, 1fr); margin: 20px 0; border-top: 1px solid #e3e9e7; border-left: 1px solid #e3e9e7; }
+.marketplace-spec-grid div { display: grid; gap: 4px; min-height: 70px; padding: 12px; border-right: 1px solid #e3e9e7; border-bottom: 1px solid #e3e9e7; }
+.marketplace-spec-grid span { color: #718083; font-size: 12px; }
+.marketplace-spec-grid strong { color: #263438; font-size: 15px; }
+.marketplace-commitments { display: grid; gap: 9px; margin: 0 0 20px; color: #40575a; font-size: 13px; }
+.marketplace-commitments .anticon { color: #0f766e; margin-right: 5px; }
+.marketplace-summary .ant-alert { margin-bottom: 16px; }
+.marketplace-information { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 36px; padding: 32px 0; }
+.marketplace-information h4.ant-typography { margin-top: 0; }
+.marketplace-requirements { padding: 14px; background: #f3f7f6; color: #40575a; white-space: pre-wrap; }
+.marketplace-merchant { display: flex; gap: 12px; align-items: flex-start; padding: 18px; border-left: 3px solid #0f766e; background: #f6f9f8; }
+.marketplace-merchant > .anticon { color: #0f766e; font-size: 22px; }
+.marketplace-merchant h5.ant-typography { margin: 2px 0; }
+.publish-number-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.publish-switch-row { display: flex; flex-wrap: wrap; gap: 28px; }
+.publish-switch-row .ant-form-item { min-width: 150px; }
+.talent-profile-overview { display: grid; gap: 24px; padding: 26px; border: 1px solid #dce8e4; background: #fff; }
+.talent-profile-hero { display: flex; align-items: center; gap: 18px; padding-bottom: 22px; border-bottom: 1px solid #e7eeec; }
+.talent-profile-hero h3.ant-typography { margin: 0 0 8px; }
+.talent-profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #e7eeec; border-left: 1px solid #e7eeec; }
+.talent-profile-stats div { display: grid; gap: 4px; padding: 14px; border-right: 1px solid #e7eeec; border-bottom: 1px solid #e7eeec; }
+.talent-profile-stats strong { color: #0f766e; font-size: 20px; }
+.talent-profile-stats span { color: #718083; font-size: 12px; }
+.talent-profile-portfolio h4.ant-typography { margin: 0 0 12px; }
+.talent-profile-portfolio .ant-image { width: calc(25% - 8px); margin: 0 8px 8px 0; aspect-ratio: 1; overflow: hidden; background: #edf4f2; }
+.talent-profile-portfolio .ant-image img { width: 100%; height: 100%; object-fit: cover; }
 .talent-mobile-header, .talent-mobile-nav { display: none; }
 .model-mobile-order-list { display: none; }
 @media (max-width: 760px) {
@@ -88,8 +129,8 @@ body { margin: 0; min-width: 320px; }
   .talent-mobile-header { display: flex; height: 56px; align-items: center; gap: 12px; padding: 0 14px; background: #fff; border-bottom: 1px solid #e4e9e8; }
   .talent-mobile-header strong { color: #0f766e; font-size: 17px; }
   .talent-mobile-header span { min-width: 0; flex: 1; overflow: hidden; color: #647477; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
-  .talent-mobile-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, 1fr); height: 68px; padding: 5px 8px env(safe-area-inset-bottom); background: rgba(255, 255, 255, .98); border-top: 1px solid #dce8e4; box-shadow: 0 -4px 14px rgba(23, 32, 38, .08); }
-  .talent-mobile-nav button { display: grid; place-items: center; gap: 2px; min-width: 0; padding: 3px; border: 0; background: transparent; color: #718083; font: inherit; font-size: 11px; }
+  .talent-mobile-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 68px; padding: 5px 8px env(safe-area-inset-bottom); background: rgba(255, 255, 255, .98); border-top: 1px solid #dce8e4; box-shadow: 0 -4px 14px rgba(23, 32, 38, .08); }
+  .talent-mobile-nav button { display: grid; place-items: center; gap: 2px; min-width: 0; padding: 3px; border: 0; background: transparent; color: #718083; font: inherit; font-size: 11px; white-space: nowrap; }
   .talent-mobile-nav button .anticon { font-size: 20px; }
   .talent-mobile-nav button.active { color: #0f766e; font-weight: 700; }
   .talent-hall-heading { margin-bottom: 14px; }
@@ -99,6 +140,15 @@ body { margin: 0; min-width: 320px; }
   .talent-order-grid { grid-template-columns: 1fr; gap: 12px; }
   .talent-order-body { gap: 10px; padding: 14px; }
   .talent-order-skeleton { min-height: 310px; }
+  .marketplace-detail-layout, .marketplace-information { grid-template-columns: 1fr; gap: 22px; }
+  .marketplace-detail-layout { padding-bottom: 24px; }
+  .marketplace-summary h2.ant-typography { font-size: 23px; }
+  .marketplace-reward strong { font-size: 26px; }
+  .marketplace-information { padding-top: 24px; }
+  .publish-number-grid { grid-template-columns: 1fr; gap: 0; }
+  .talent-profile-overview { padding: 18px; }
+  .talent-profile-stats { grid-template-columns: 1fr; }
+  .talent-profile-portfolio .ant-image { width: calc(33.333% - 8px); }
   .model-orders-table { display: none; }
   .model-mobile-order-list { display: grid; gap: 10px; }
   .model-mobile-order { display: grid; gap: 8px; width: 100%; padding: 14px; border: 1px solid #dce8e4; border-radius: 6px; background: #fff; color: #172026; text-align: left; }

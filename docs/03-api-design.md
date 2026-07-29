@@ -74,6 +74,8 @@ backend/
 | PUT | /api/users/me/merchant-profile | 更新商家资料（店铺名、寄件地址等） | merchant |
 | PUT | /api/users/me/model-profile | 更新达人资料（三维、收货地址、作品集） | model |
 | POST | /api/users/me/verify | 提交实名认证资料（真实姓名、身份证号、支付宝账号） | merchant/model |
+| GET | /api/users/me/talent-status | 获取达人资料完整度、认证状态和当前等级接单额度 | model |
+| GET | /api/users/model-ranking | 获取平台演示热榜和真实达人成交榜 | model |
 | GET | /api/admin/users | 用户列表，支持按角色/状态/关键字筛选分页 | admin |
 | PUT | /api/admin/users/{id}/status | 封禁/启用账号 | admin |
 | PUT | /api/admin/users/{id}/verify | 审核实名认证（通过/驳回+原因） | admin |
@@ -84,7 +86,7 @@ backend/
 |---|---|---|---|
 | POST | /api/orders | 商家发布订单 | merchant |
 | GET | /api/orders/hall | 抢单大厅列表（status=PUBLISHED，支持分页/筛选） | model |
-| POST | /api/orders/{id}/claim | 抢单（原子更新，见 01-business-flow.md 第 3 节） | model |
+| POST | /api/orders/{id}/claim | 抢单（资料完成、实名认证通过、等级额度校验及原子更新） | model |
 | GET | /api/orders | 我的订单列表（商家看自己发布的，达人看自己抢的，按 status 筛选） | merchant/model |
 | GET | /api/orders/{id} | 订单详情 | 订单双方 + admin |
 | PUT | /api/orders/{id}/ship | 商家填寄件单号，状态 CLAIMED→SHIPPED_TO_MODEL | merchant（订单所有者） |

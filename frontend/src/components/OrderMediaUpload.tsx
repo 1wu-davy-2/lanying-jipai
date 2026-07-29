@@ -38,6 +38,7 @@ export function OrderMediaUpload({ value, onChange, accept, maxCount = 9 }: Orde
   };
   return <Upload
     listType="picture-card"
+    multiple={maxCount > 1}
     accept={accept === "image" ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,video/mp4"}
     fileList={fileList}
     beforeUpload={beforeUpload}

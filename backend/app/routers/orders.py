@@ -8,17 +8,19 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_role
-from app.models.order import Order, OrderLog, OrderMessage
+from app.models.order import Order, OrderApplication, OrderLog, OrderMessage
 from app.models.user import User
 from app.product_categories import PRODUCT_CATEGORIES
 from app.schemas.order import (
     OrderCreateRequest,
+    OrderApplicationRequest,
     OrderMessageRequest,
     RejectOrderRequest,
     ShipmentRequest,
     SubmitOrderRequest,
 )
-from app.services.order_service import OrderConflictError, claim_order, transition_order
+from app.services.order_service import OrderConflictError, transition_order
+from app.services.talent_level import claim_block_reason
 from app.services.wallet_service import WalletConflictError, complete_order_and_settle
 from app.utils.order_no import new_order_no
 
@@ -39,6 +41,12 @@ def serialize_order(order: Order) -> dict[str, object]:
         "description": order.description,
         "product_categories": order_categories(order),
         "sample_images": json.loads(order.sample_images or "[]"),
+        "order_type": order.order_type,
+        "quantity": order.quantity,
+        "required_media_count": order.required_media_count,
+        "delivery_days": order.delivery_days,
+        "deposit_required": order.deposit_required,
+        "return_required": order.return_required,
         "commission_amount": str(order.commission_amount),
         "deposit_amount": str(order.deposit_amount),
         "shoot_requirements": order.shoot_requirements,
@@ -98,6 +106,12 @@ def new_published_order(payload: OrderCreateRequest, merchant_id: int) -> Order:
         description=payload.description,
         product_categories=json.dumps(payload.product_categories, ensure_ascii=False),
         sample_images=json.dumps(payload.sample_images),
+        order_type=payload.order_type,
+        quantity=payload.quantity,
+        required_media_count=payload.required_media_count,
+        delivery_days=payload.delivery_days,
+        deposit_required=payload.deposit_required,
+        return_required=payload.return_required,
         commission_amount=payload.commission_amount,
         deposit_amount=payload.deposit_amount,
         shoot_requirements=payload.shoot_requirements,
@@ -123,7 +137,7 @@ def order_hall(
     category: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    _: User = Depends(require_role("model")),
+    user: User = Depends(require_role("model")),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     if category is not None and category not in PRODUCT_CATEGORIES:
@@ -134,17 +148,115 @@ def order_hall(
         orders = [order for order in orders if category in order_categories(order)]
     total = len(orders)
     items = orders[(page - 1) * page_size : page * page_size]
-    return {"code": 0, "message": "ok", "data": {"items": [serialize_order(order) for order in items], "total": total, "page": page, "page_size": page_size}}
+    application_statuses = {
+        item.order_id: item.status
+        for item in session.scalars(
+            select(OrderApplication).where(OrderApplication.model_id == user.id, OrderApplication.order_id.in_([order.id for order in items]))
+        )
+    } if items else {}
+    serialized_items = []
+    for order in items:
+        data = serialize_order(order)
+        data["application_status"] = application_statuses.get(order.id)
+        serialized_items.append(data)
+    return {"code": 0, "message": "ok", "data": {"items": serialized_items, "total": total, "page": page, "page_size": page_size}}
+
+
+def public_merchant(order: Order, session: Session) -> dict[str, object] | None:
+    merchant = session.get(User, order.merchant_id)
+    if merchant is None:
+        return None
+    profile = merchant.merchant_profile
+    return {
+        "id": merchant.id,
+        "nickname": merchant.nickname,
+        "avatar_url": merchant.avatar_url,
+        "shop_name": profile.shop_name if profile else merchant.nickname,
+        "shop_platform": profile.shop_platform if profile else None,
+    }
+
+
+@router.get("/hall/{order_id}")
+def order_hall_detail(
+    order_id: int,
+    user: User = Depends(require_role("model")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    order = get_order(session, order_id)
+    if order.status != "PUBLISHED":
+        raise HTTPException(status_code=409, detail="该订单已结束招募")
+    data = serialize_order(order)
+    application = session.scalar(select(OrderApplication).where(OrderApplication.order_id == order.id, OrderApplication.model_id == user.id))
+    data["application_status"] = application.status if application else None
+    data["application_reason"] = application.review_reason if application else None
+    data["merchant"] = public_merchant(order, session)
+    return {"code": 0, "message": "ok", "data": data}
+
+
+@router.post("/{order_id}/applications", status_code=status.HTTP_201_CREATED)
+def create_application(
+    order_id: int,
+    payload: OrderApplicationRequest,
+    user: User = Depends(require_role("model")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    order = get_order(session, order_id)
+    if order.status != "PUBLISHED":
+        raise HTTPException(status_code=409, detail="该订单已结束招募")
+    reason = claim_block_reason(session, user, order.commission_amount)
+    if reason:
+        raise HTTPException(status_code=403, detail=reason)
+    application = OrderApplication(order_id=order.id, model_id=user.id, message=(payload.message or "").strip() or None)
+    session.add(application)
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="你已提交过该订单的申请") from exc
+    session.refresh(application)
+    return {
+        "code": 0,
+        "message": "申请已提交，等待运营审核",
+        "data": {
+            "id": application.id,
+            "order_id": application.order_id,
+            "status": application.status,
+            "message": application.message,
+            "created_at": application.created_at.isoformat() if application.created_at else None,
+        },
+    }
+
+
+@router.get("/my-applications")
+def list_my_applications(
+    user: User = Depends(require_role("model")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    applications = list(session.scalars(select(OrderApplication).where(OrderApplication.model_id == user.id).order_by(OrderApplication.created_at.desc())))
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "items": [
+                {
+                    "id": item.id,
+                    "status": item.status,
+                    "message": item.message,
+                    "review_reason": item.review_reason,
+                    "created_at": item.created_at.isoformat() if item.created_at else None,
+                    "order": serialize_order(get_order(session, item.order_id)),
+                }
+                for item in applications
+            ],
+            "total": len(applications),
+        },
+    }
 
 
 @router.post("/{order_id}/claim")
 def claim(order_id: int, user: User = Depends(require_role("model")), session: Session = Depends(get_db)) -> dict[str, object]:
-    try:
-        claim_order(session, order_id, user.id)
-    except OrderConflictError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    order = get_order(session, order_id)
-    return {"code": 0, "message": "ok", "data": serialize_order(order)}
+    # Keep the legacy endpoint explicit so clients cannot bypass operations review.
+    raise HTTPException(status_code=409, detail="接单流程已改为申请审核，请提交接单申请")
 
 
 @router.get("")

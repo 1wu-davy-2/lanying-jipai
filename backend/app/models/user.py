@@ -63,6 +63,9 @@ class ModelProfile(TimestampMixin, Base):
     shoe_size: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     skill_tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     receive_address: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    receiver_name: Mapped[str] = mapped_column(String(50), default="", nullable=False)
+    receiver_phone: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    receive_address_detail: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     portfolio_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     user: Mapped[User] = relationship(back_populates="model_profile")

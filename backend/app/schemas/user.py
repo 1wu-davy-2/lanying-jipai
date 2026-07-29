@@ -20,7 +20,7 @@ class RefreshRequest(BaseModel):
 
 
 class UserUpdateRequest(BaseModel):
-    nickname: str | None = Field(default=None, max_length=50)
+    nickname: str | None = Field(default=None, min_length=2, max_length=50)
     avatar_url: str | None = Field(default=None, max_length=255)
 
 
@@ -43,7 +43,10 @@ class ModelProfileRequest(BaseModel):
     shoe_size: str | None = Field(default=None, max_length=10)
     skill_tags: str | None = Field(default=None, max_length=255)
     receive_address: str = Field(min_length=1, max_length=255)
-    portfolio_urls: str | None = None
+    receiver_name: str = Field(min_length=2, max_length=50)
+    receiver_phone: str = Field(min_length=6, max_length=20)
+    receive_address_detail: str = Field(min_length=1, max_length=255)
+    portfolio_urls: list[str] = Field(min_length=6, max_length=12)
 
 
 class VerifyRequest(BaseModel):

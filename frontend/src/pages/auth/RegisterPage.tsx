@@ -16,7 +16,7 @@ export function RegisterPage() {
     try {
       const session = await register(phone, password, "model");
       setSession(session);
-      navigate("/model/hall", { replace: true });
+      navigate("/model/onboarding", { replace: true });
     } catch (error) {
       message.error(error instanceof Error ? error.message : "注册失败，请稍后重试");
     } finally {
