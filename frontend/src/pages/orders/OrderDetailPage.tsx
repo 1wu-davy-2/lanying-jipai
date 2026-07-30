@@ -76,7 +76,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
           { key: "status", label: "当前状态", children: <OrderStatusTag status={order.status} /> },
           { key: "created", label: "创建时间", children: order.created_at ? new Date(order.created_at).toLocaleString() : "-" },
           { key: "merchant", label: "商家归属", children: order.merchant ? `${order.merchant.nickname} · ${order.merchant.phone}` : `商家 #${order.merchant_id}` },
-          { key: "requirements", label: "交付要求", children: order.shoot_requirements || "未填写" },
+          { key: "requirements", label: "交付要求", children: order.shoot_requirements || "未填写", span: 2 },
           { key: "description", label: "拍摄说明", children: order.description, span: 2 },
         ]} />
         {modelNextAction && <div className="model-order-detail-next-action"><span>下一步</span><strong>{modelNextAction}</strong></div>}
@@ -101,7 +101,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
       <List dataSource={messages?.items ?? []} locale={{ emptyText: "暂无留言" }} renderItem={(item) => <List.Item><List.Item.Meta title={item.sender_id === order.merchant_id ? "商家" : "达人"} description={item.created_at ? new Date(item.created_at).toLocaleString() : ""} /><span>{item.content}</span></List.Item>} />
       <Space.Compact className="message-composer"><Input value={messageText} onChange={(event) => setMessageText(event.target.value)} onPressEnter={sendMessage} placeholder="输入留言" maxLength={5000} /><Button type="primary" onClick={sendMessage}>发送</Button></Space.Compact>
     </Card>
-    <Modal title={action === "ship" ? "填写寄样物流" : action === "submit" ? "提交素材并回寄" : "发起争议"} open={action !== null} onCancel={() => { setAction(null); form.resetFields(); setMedia([]); }} footer={null} destroyOnClose>
+    <Modal title={action === "ship" ? "填写寄样物流" : action === "submit" ? "提交素材并回寄" : "发起争议"} open={action !== null} onCancel={() => { setAction(null); form.resetFields(); setMedia([]); }} footer={null} destroyOnHidden>
       <Form form={form} layout="vertical" onFinish={submitAction}>
         {action === "submit" && <Form.Item label="交付素材" required><OrderMediaUpload value={media} onChange={setMedia} accept="media" /></Form.Item>}
         {(action === "ship" || action === "submit") && <><Form.Item name="company" label="物流公司" rules={[{ required: true, message: "请输入物流公司" }]}><Input /></Form.Item><Form.Item name="tracking_no" label="物流单号" rules={[{ required: true, message: "请输入物流单号" }]}><Input /></Form.Item></>}

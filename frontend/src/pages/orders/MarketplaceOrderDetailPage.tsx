@@ -101,7 +101,7 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
         </div>
       </aside>
     </div>
-    <Modal title="提交接单申请" open={open} onCancel={() => setOpen(false)} onOk={submit} okText="确认申请" confirmLoading={submitting} destroyOnClose>
+    <Modal title="提交接单申请" open={open} onCancel={() => setOpen(false)} onOk={submit} okText="确认申请" confirmLoading={submitting} destroyOnHidden>
       <Typography.Paragraph type="secondary">运营会根据作品、等级和当前档期审核。申请通过后，商家才会寄出样品。</Typography.Paragraph>
       <Input.TextArea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} maxLength={300} showCount placeholder="简要说明你的拍摄方向、档期或相近作品经验（选填）" />
     </Modal>

@@ -148,7 +148,7 @@ export function AdminOperationsPage() {
         ]}
       />
     </> : <Empty description="选择商家后查看或发布订单" />}
-    <Modal title="新建商家" open={merchantOpen} onCancel={() => { setMerchantOpen(false); merchantForm.resetFields(); }} footer={null} destroyOnClose>
+    <Modal title="新建商家" open={merchantOpen} onCancel={() => { setMerchantOpen(false); merchantForm.resetFields(); }} footer={null} destroyOnHidden>
       <Form form={merchantForm} layout="vertical" onFinish={createMerchant} requiredMark={false}>
         <Form.Item name="shop_name" label="店铺名称" rules={[{ required: true, message: "请输入店铺名称" }]}><Input maxLength={100} /></Form.Item>
         <Form.Item name="nickname" label="商家显示名称"><Input maxLength={50} /></Form.Item>
@@ -160,7 +160,7 @@ export function AdminOperationsPage() {
         <Button type="primary" htmlType="submit" loading={saving}>确认创建</Button>
       </Form>
     </Modal>
-    <Modal title="发布寄拍订单" open={publishOpen} onCancel={() => { setPublishOpen(false); publishForm.resetFields(); setSampleImages([]); }} footer={null} destroyOnClose>
+    <Modal title="发布寄拍订单" open={publishOpen} onCancel={() => { setPublishOpen(false); publishForm.resetFields(); setSampleImages([]); }} footer={null} destroyOnHidden>
       <Form form={publishForm} layout="vertical" onFinish={publish} requiredMark={false} initialValues={{ order_type: "product_photo", quantity: 1, required_media_count: 6, delivery_days: 5, deposit_required: false, return_required: true }}>
         <Form.Item name="order_type" label="订单类型" rules={[{ required: true, message: "请选择订单类型" }]}><Select options={[{ value: "product_photo", label: "商品平拍" }, { value: "try_on", label: "试穿展示" }, { value: "short_video", label: "短视频素材" }, { value: "live_show", label: "直播展示" }]} /></Form.Item>
         <Form.Item name="product_categories" label="商品分类" rules={[{ required: true, message: "请选择至少一个商品分类" }, { type: "array", min: 1, max: 3, message: "请选择 1 至 3 个商品分类" }]}>
@@ -169,7 +169,7 @@ export function AdminOperationsPage() {
         <Form.Item name="title" label="订单标题" rules={[{ required: true, message: "请输入订单标题" }]}><Input maxLength={100} /></Form.Item>
         <Form.Item name="description" label="拍摄说明" rules={[{ required: true, message: "请输入拍摄说明" }]}><Input.TextArea rows={4} /></Form.Item>
         <Form.Item label="样品图片"><OrderMediaUpload value={sampleImages} onChange={setSampleImages} accept="image" /></Form.Item>
-        <div className="publish-number-grid"><Form.Item name="quantity" label="寄拍数量" rules={[{ required: true }]}><InputNumber min={1} max={1000} className="field-full" addonAfter="件" /></Form.Item><Form.Item name="required_media_count" label="交付素材" rules={[{ required: true }]}><InputNumber min={1} max={100} className="field-full" addonAfter="份起" /></Form.Item><Form.Item name="delivery_days" label="收货后交付" rules={[{ required: true }]}><InputNumber min={1} max={30} className="field-full" addonAfter="天内" /></Form.Item></div>
+        <div className="publish-number-grid"><Form.Item name="quantity" label="寄拍数量" rules={[{ required: true }]}><InputNumber min={1} max={1000} className="field-full" suffix="件" /></Form.Item><Form.Item name="required_media_count" label="交付素材" rules={[{ required: true }]}><InputNumber min={1} max={100} className="field-full" suffix="份起" /></Form.Item><Form.Item name="delivery_days" label="收货后交付" rules={[{ required: true }]}><InputNumber min={1} max={30} className="field-full" suffix="天内" /></Form.Item></div>
         <Form.Item name="commission_amount" label="佣金" rules={[{ required: true, message: "请输入佣金" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item>
         <div className="publish-switch-row"><Form.Item name="deposit_required" label="需要缴纳押金" valuePropName="checked"><Switch /></Form.Item><Form.Item name="return_required" label="拍摄后需要返货" valuePropName="checked"><Switch /></Form.Item></div>
         <Form.Item noStyle shouldUpdate={(previous, current) => previous.deposit_required !== current.deposit_required}>{({ getFieldValue }) => getFieldValue("deposit_required") ? <Form.Item name="deposit_amount" label="押金金额" rules={[{ required: true, message: "请输入押金金额" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item> : null}</Form.Item>

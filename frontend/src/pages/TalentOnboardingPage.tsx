@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Card, Form, Input, Result, Skeleton, Steps, Typography, message } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import { TalentProfileFields } from "../components/TalentProfileFields";
 
 type TalentProfileValues = {
   nickname: string;
-  avatar_url: string;
+  avatar_url?: string;
   height_cm?: number | null;
   weight_kg?: number | null;
   skill_tags?: string | null;
@@ -27,19 +27,18 @@ export function TalentOnboardingPage() {
   const verificationStep = location.pathname.endsWith("/verify");
   const { data, isLoading } = useQuery({ queryKey: ["current-user"], queryFn: getCurrentUser });
   const [saving, setSaving] = useState(false);
-  const [profileForm] = Form.useForm<TalentProfileValues>();
-  const [verifyForm] = Form.useForm();
-
-  useEffect(() => {
-    if (!data) return;
-    profileForm.setFieldsValue({
-      nickname: data.nickname,
-      avatar_url: data.avatar_url ?? undefined,
-      ...data.model_profile,
-      receive_address: addressToPath(data.model_profile?.receive_address),
-      portfolio_urls: data.model_profile?.portfolio_urls ?? [],
-    });
-  }, [data, profileForm]);
+  const profileInitialValues: TalentProfileValues | undefined = data ? {
+    nickname: data.nickname,
+    avatar_url: data.avatar_url ?? undefined,
+    height_cm: data.model_profile?.height_cm,
+    weight_kg: data.model_profile?.weight_kg,
+    skill_tags: data.model_profile?.skill_tags,
+    receive_address: addressToPath(data.model_profile?.receive_address),
+    receiver_name: data.model_profile?.receiver_name ?? "",
+    receiver_phone: data.model_profile?.receiver_phone ?? "",
+    receive_address_detail: data.model_profile?.receive_address_detail ?? "",
+    portfolio_urls: data.model_profile?.portfolio_urls ?? [],
+  } : undefined;
 
   const saveProfile = async (values: TalentProfileValues) => {
     setSaving(true);
@@ -89,14 +88,14 @@ export function TalentOnboardingPage() {
     <Card className="content-card talent-onboarding-panel" title={verificationStep ? "实名认证" : "接单资料"}>
       {verificationStep ? <>
         {data?.verify_status === "rejected" && <Alert type="error" showIcon message="认证被驳回" description={data.verify_reject_reason || "请核对资料后重新提交"} />}
-        {data?.verify_status === "pending" ? <Result status="info" title="实名认证审核中" subTitle="管理员审核通过后，账号将自动获得正式接单资格。" extra={<Button onClick={() => navigate("/model/hall")}>返回大厅</Button>} /> : <Form form={verifyForm} layout="vertical" onFinish={submitVerify} requiredMark={false}>
+        {data?.verify_status === "pending" ? <Result status="info" title="实名认证审核中" subTitle="管理员审核通过后，账号将自动获得正式接单资格。" extra={<Button onClick={() => navigate("/model/hall")}>返回大厅</Button>} /> : <Form layout="vertical" onFinish={submitVerify} requiredMark={false}>
           <Form.Item name="real_name" label="真实姓名" rules={[{ required: true, message: "请输入真实姓名" }]}><Input /></Form.Item>
           <Form.Item name="id_card_no" label="身份证号" rules={[{ required: true, message: "请输入身份证号" }]}><Input /></Form.Item>
           <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input /></Form.Item>
           <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
           <Button type="primary" htmlType="submit" loading={saving}>提交实名认证</Button>
         </Form>}
-      </> : <Form form={profileForm} layout="vertical" onFinish={saveProfile} requiredMark={false}>
+      </> : <Form key={data?.id ?? "onboarding-profile"} initialValues={profileInitialValues} layout="vertical" onFinish={saveProfile} requiredMark={false}>
         <TalentProfileFields />
         <Button type="primary" htmlType="submit" loading={saving}>下一步：实名认证</Button>
       </Form>}

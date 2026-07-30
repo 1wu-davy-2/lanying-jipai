@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TalentOnboardingPage } from "./TalentOnboardingPage";
 
@@ -34,6 +34,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("TalentOnboardingPage", () => {
   it("presents the two onboarding steps with a clear preparation context", async () => {
     renderPage();
@@ -44,5 +48,31 @@ describe("TalentOnboardingPage", () => {
     expect(screen.getByText("实名认证")).toBeVisible();
     expect(screen.getByText("接单资料")).toBeVisible();
     expect(screen.getByRole("button", { name: "下一步：实名认证" })).toBeVisible();
+  });
+
+  it("does not create unconnected form instances before the verification step", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage();
+
+    await screen.findByRole("heading", { name: "达人入驻" });
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("useForm");
+  });
+
+  it("does not create form instances after verification is complete", async () => {
+    mocks.getCurrentUser.mockResolvedValueOnce({
+      id: 2,
+      phone: "13800138001",
+      role: "model",
+      nickname: "小雨",
+      verify_status: "verified",
+      model_profile: { receive_address: "上海市/浦东新区", receiver_name: "小雨", receiver_phone: "13800138001", receive_address_detail: "测试路 88 号", portfolio_urls: Array.from({ length: 6 }, () => "https://example.com/portfolio.png") },
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage();
+
+    await screen.findByText("达人认证已通过");
+
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("useForm");
   });
 });

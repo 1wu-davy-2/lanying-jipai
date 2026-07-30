@@ -37,7 +37,13 @@ def api_response(page: Page, path: str, method: str):
 
 
 def attach_diagnostics(page: Page, errors: list[str]) -> None:
-    page.on("console", lambda message: errors.append(f"console: {message.text}") if message.type == "error" and not message.text.startswith("Warning:") else None)
+    ignored_console_messages = ("Static function can not consume context like dynamic theme.",)
+    page.on(
+        "console",
+        lambda message: errors.append(f"console: {message.text}")
+        if message.type == "error" and not any(ignored in message.text for ignored in ignored_console_messages)
+        else None,
+    )
     page.on("pageerror", lambda error: errors.append(f"pageerror: {error}"))
     page.on(
         "response",
@@ -250,7 +256,7 @@ def main() -> None:
         talent_context, talent = new_page(browser, browser_errors)
         login(talent, "/talent/login", TALENT_PHONE, TALENT_PASSWORD, "/model/hall")
         goto(talent, "/model/wallet")
-        expect(talent.locator(".balance-card strong", has_text=COMMISSION)).to_be_visible()
+        expect(talent.locator(".wallet-summary-card--available strong", has_text=COMMISSION)).to_be_visible()
         talent.get_by_role("button", name="申请提现").click()
         talent.get_by_label("提现金额").fill(COMMISSION)
         with api_response(talent, "/api/withdrawals", "POST") as response_info:

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProfilePage } from "./ProfilePage";
 
@@ -54,6 +54,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("ProfilePage", () => {
   it("presents a private talent profile around verification, ability, and portfolio", async () => {
     renderPage();
@@ -65,5 +69,16 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("button", { name: "维护接单资料" })).toBeVisible();
     expect(screen.queryByText("13800138001")).not.toBeInTheDocument();
     expect(screen.queryByText("测试路 88 号")).not.toBeInTheDocument();
+  });
+
+  it("renders the read-only profile without Ant Design deprecation warnings", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage();
+
+    await screen.findByRole("heading", { name: "身份与认证" });
+    const diagnostics = consoleError.mock.calls.flat().join(" ");
+
+    expect(diagnostics).not.toContain("labelStyle");
+    expect(diagnostics).not.toContain("useForm");
   });
 });
