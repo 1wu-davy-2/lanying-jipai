@@ -12,6 +12,7 @@ import { acceptAdminOrder, cancelAdminOrder, rejectAdminOrder, shipAdminOrder } 
 import { OrderMediaUpload } from "../../components/OrderMediaUpload";
 import { OrderStatusTag, orderStatusLabel } from "../../components/OrderStatusTag";
 import type { UserRole } from "../../types";
+import { talentOrderNextAction } from "./talentOrderProgress";
 
 type ActionKind = "ship" | "submit" | "reject";
 
@@ -64,6 +65,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
   const canSubmit = role === "model" && order.status === "IN_PROGRESS";
   const canAccept = actsForMerchant && order.status === "RETURNED";
   const canCancel = actsForMerchant && order.status === "PUBLISHED";
+  const modelNextAction = role === "model" ? talentOrderNextAction(order.status) : null;
   const mediaUrls = [...order.sample_images, ...order.submitted_media];
   return <div className="order-detail">
     <div className="page-heading"><Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回订单列表" onClick={() => navigate(role === "admin" ? "/admin/operations" : `/${role}/orders`)} /><Typography.Title level={2}>订单详情</Typography.Title><OrderStatusTag status={order.status} /></div>
@@ -77,6 +79,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
           { key: "requirements", label: "交付要求", children: order.shoot_requirements || "未填写" },
           { key: "description", label: "拍摄说明", children: order.description, span: 2 },
         ]} />
+        {modelNextAction && <div className="model-order-detail-next-action"><span>下一步</span><strong>{modelNextAction}</strong></div>}
         {(order.ship_to_model_tracking_no || order.return_tracking_no) && <><Divider /><Descriptions column={{ xs: 1, sm: 2 }} size="small" items={[
           { key: "ship", label: "寄样物流", children: order.ship_to_model_tracking_no ? `${order.ship_to_model_company} ${order.ship_to_model_tracking_no}` : "-" },
           { key: "return", label: "回寄物流", children: order.return_tracking_no ? `${order.return_company} ${order.return_tracking_no}` : "-" },

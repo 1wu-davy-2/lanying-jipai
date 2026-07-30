@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getMyOrders, type OrderStatus } from "../../api/orders";
 import { OrderStatusTag } from "../../components/OrderStatusTag";
+import { talentOrderNextAction } from "./talentOrderProgress";
 
 const tabs: { key: OrderStatus | "all"; label: string }[] = [
   { key: "all", label: "全部" }, { key: "CLAIMED", label: "待寄出" }, { key: "SHIPPED_TO_MODEL", label: "待收货" },
@@ -23,20 +24,22 @@ export function ModelOrdersPage() {
   };
 
   return <div className="model-orders-page">
-    <div className="page-heading"><Typography.Title level={2}>我的订单</Typography.Title></div>
+    <div className="page-heading model-orders-heading"><div><Typography.Title level={2}>我的订单</Typography.Title><Typography.Text type="secondary">查看订单状态和下一步安排。</Typography.Text></div></div>
     <Tabs activeKey={status} onChange={selectStatus} items={tabs} />
     <div className="model-mobile-order-list">
       {isLoading ? <Skeleton active paragraph={{ rows: 5 }} /> : orders.length > 0 ? <>{orders.map((order) => <button type="button" className="model-mobile-order" key={order.id} onClick={() => navigate(`/model/orders/${order.id}`)}>
         <span className="model-mobile-order-heading"><strong>{order.title}</strong><OrderStatusTag status={order.status} /></span>
         <span className="model-mobile-order-number">{order.order_no}</span>
-        <span className="model-mobile-order-footer"><span>商品寄拍佣金</span><b>¥{order.commission_amount}</b></span>
+        <span className="model-mobile-order-progress"><span>下一步</span><strong>{talentOrderNextAction(order.status)}</strong></span>
+        <span className="model-mobile-order-footer"><span>本单收益</span><b>¥{order.commission_amount}</b></span>
       </button>)}</> : <Empty description="暂无订单" />}
       {(data?.total ?? 0) > 20 && <Pagination simple current={page} pageSize={20} total={data?.total ?? 0} onChange={setPage} showSizeChanger={false} />}
     </div>
     <div className="model-orders-table"><Table rowKey="id" loading={isLoading} dataSource={orders} pagination={{ current: page, pageSize: 20, total: data?.total ?? 0, onChange: setPage, showSizeChanger: false }} onRow={(record) => ({ onClick: () => navigate(`/model/orders/${record.id}`), className: "table-row-link" })} columns={[
       { title: "订单", dataIndex: "title" },
-      { title: "商家佣金", dataIndex: "commission_amount", render: (value) => `¥${value}` },
+      { title: "收益", dataIndex: "commission_amount", render: (value) => `¥${value}` },
       { title: "状态", dataIndex: "status", render: (value) => <OrderStatusTag status={value} /> },
+      { title: "下一步", dataIndex: "status", render: (value) => talentOrderNextAction(value) },
     ]} /></div>
   </div>;
 }
