@@ -1,4 +1,6 @@
 from pathlib import Path
+import hashlib
+import re
 
 from alembic import command
 from alembic.config import Config
@@ -67,3 +69,37 @@ def test_orm_identifiers_match_mariadb_bigint_migrations() -> None:
 
     for model in (User, MerchantProfile, ModelProfile, Order, OrderLog, OrderMessage, Wallet, WalletTransaction, Withdrawal, PlatformConfig, MediaBackupJob):
         assert model.__table__.c.id.type.compile(dialect=mysql.dialect()) == "BIGINT"
+
+
+def test_script_library_migration_preserves_every_source_document(tmp_path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'script-library.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
+
+    command.upgrade(config, "head")
+
+    source_directory = Path(__file__).parents[2] / "docs" / "话术"
+    expected_documents = {
+        "douyin-ops-scripts": ("douyin-ops-scripts.md", 12, 46),
+        "recruitment-copy": ("recruitment-copy.md", 11, 33),
+        "sensitive-category-scripts": ("sensitive-category-scripts.md", 13, 34),
+    }
+    engine = create_engine(database_url)
+    with engine.connect() as connection:
+        assert {"script_categories", "script_documents"} <= set(inspect(engine).get_table_names())
+        rows = connection.execute(
+            text(
+                "SELECT source_key, source_filename, markdown_body, content_sha256, section_count, copy_block_count "
+                "FROM script_documents ORDER BY source_key"
+            )
+        ).mappings().all()
+
+    assert len(rows) == len(expected_documents)
+    for row in rows:
+        filename, section_count, copy_block_count = expected_documents[row["source_key"]]
+        body = (source_directory / filename).read_text(encoding="utf-8")
+        assert row["source_filename"] == filename
+        assert row["markdown_body"] == body
+        assert row["content_sha256"] == hashlib.sha256(body.encode("utf-8")).hexdigest()
+        assert row["section_count"] == section_count == len(re.findall(r"(?m)^##\s+", body))
+        assert row["copy_block_count"] == copy_block_count == len(re.findall(r"(?s)```(?:\w+)?\s*\r?\n(.*?)\r?\n```", body))
