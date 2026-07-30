@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Avatar, Button, Card, Col, Descriptions, Form, Image, Input, Row, Skeleton, Space, Tag, Typography, message } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 
 import { addressFromPath, addressToPath } from "../constants/shippingAddresses";
 import { getCurrentUser, saveCurrentUser, saveMerchantProfile, saveModelProfile, submitVerification } from "../api/users";
@@ -91,22 +92,17 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
     </>}
   </Card>;
   return <div className="profile-page">
-    <div className="page-heading"><Typography.Title level={2}>{title}</Typography.Title><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag>{role === "model" && !editing && <Button onClick={() => setEditing(true)}>编辑资料</Button>}</div>
+    <div className="page-heading profile-heading"><div><Typography.Text className="talent-page-kicker">{role === "model" ? "个人账户" : "店铺账户"}</Typography.Text><Typography.Title level={2}>{title}</Typography.Title>{role === "model" && <Typography.Text type="secondary">认证、接单资料和作品集集中维护。</Typography.Text>}</div><Space wrap><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag>{role === "model" && !editing && <Button icon={<EditOutlined aria-hidden="true" />} onClick={() => setEditing(true)}>维护接单资料</Button>}</Space></div>
     {isLoading ? <Skeleton active /> : role === "model" && !editing && data ? <Row gutter={[20, 20]}>
       <Col xs={24} lg={15}>
         <section className="talent-profile-overview">
           <div className="talent-profile-hero">
             <Avatar size={88} src={data.avatar_url}>{data.nickname.slice(0, 1)}</Avatar>
-            <div><Typography.Title level={3}>{data.nickname}</Typography.Title><Space wrap><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag><Tag color="cyan">{talentStatus?.level.code || "L1"} {talentStatus?.level.name || "新星达人"}</Tag></Space></div>
+            <div><Typography.Title level={4}>身份与认证</Typography.Title><Typography.Title level={3}>{data.nickname}</Typography.Title><Space wrap><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag><Tag color="cyan">{talentStatus?.level.code || "L1"} {talentStatus?.level.name || "新星达人"}</Tag></Space><Typography.Text className="talent-profile-verification-copy">{verified ? "实名认证已完成，可按当前等级申请订单。" : "完成认证后即可正式接单。"}</Typography.Text></div>
           </div>
-          <div className="talent-profile-stats"><div><strong>{talentStatus?.completed_orders ?? 0}</strong><span>已完成订单</span></div><div><strong>{talentStatus?.active_orders ?? 0}</strong><span>进行中订单</span></div><div><strong>¥{talentStatus?.level.max_commission_amount ?? "300"}</strong><span>单笔接单上限</span></div></div>
-          <Descriptions column={{ xs: 1, sm: 2 }} size="small" labelStyle={{ color: "#718083" }}>
-            <Descriptions.Item label="身高 / 体重">{data.model_profile?.height_cm || "-"} cm / {data.model_profile?.weight_kg || "-"} kg</Descriptions.Item>
-            <Descriptions.Item label="擅长标签">{data.model_profile?.skill_tags || "未填写"}</Descriptions.Item>
-            <Descriptions.Item label="收件人">{data.model_profile?.receiver_name} · {data.model_profile?.receiver_phone}</Descriptions.Item>
-            <Descriptions.Item label="收货地址">{data.model_profile?.receive_address} {data.model_profile?.receive_address_detail}</Descriptions.Item>
-          </Descriptions>
-          <div className="talent-profile-portfolio"><Typography.Title level={4}>作品集</Typography.Title><Image.PreviewGroup>{(data.model_profile?.portfolio_urls ?? []).map((url) => <Image key={url} src={url} alt="达人作品" />)}</Image.PreviewGroup></div>
+          <section className="talent-profile-section"><Typography.Title level={4}>接单能力</Typography.Title><div className="talent-profile-stats"><div><strong>{talentStatus?.completed_orders ?? 0}</strong><span>已完成订单</span></div><div><strong>{talentStatus?.active_orders ?? 0}</strong><span>进行中订单</span></div><div><strong>¥{talentStatus?.level.max_commission_amount ?? "300"}</strong><span>单笔接单上限</span></div></div><Descriptions column={{ xs: 1, sm: 2 }} size="small" labelStyle={{ color: "#718083" }}><Descriptions.Item label="身高 / 体重">{data.model_profile?.height_cm || "-"} cm / {data.model_profile?.weight_kg || "-"} kg</Descriptions.Item><Descriptions.Item label="擅长标签">{data.model_profile?.skill_tags || "未填写"}</Descriptions.Item></Descriptions></section>
+          <section className="talent-profile-section talent-profile-contact"><Typography.Title level={4}>收件信息</Typography.Title><Typography.Text type="secondary">已配置收货信息，接单后将用于商家寄送样品。</Typography.Text><Button type="link" onClick={() => setEditing(true)}>维护收件信息</Button></section>
+          <section className="talent-profile-portfolio"><Typography.Title level={4}>作品集</Typography.Title><Image.PreviewGroup>{(data.model_profile?.portfolio_urls ?? []).map((url) => <Image key={url} src={url} alt="达人作品" />)}</Image.PreviewGroup></section>
         </section>
       </Col>
       <Col xs={24} lg={9}>{verificationPanel}</Col>

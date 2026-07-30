@@ -102,7 +102,7 @@ describe("App", () => {
     });
     renderWithProviders("/model/wallet");
 
-    expect(screen.getByRole("heading", { name: "我的钱包" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "资金账户" })).toBeInTheDocument();
   });
 
   it("shows the administrator dashboard", () => {
