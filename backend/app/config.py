@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.schemas.app_release import AndroidReleaseManifest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
@@ -45,6 +48,20 @@ class Settings(BaseSettings):
     android_update_apk_url: str | None = None
     android_update_apk_sha256: str | None = None
     android_update_release_notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_enabled_android_update(self) -> "Settings":
+        if self.android_update_version_code <= 0:
+            return self
+
+        AndroidReleaseManifest(
+            version_code=self.android_update_version_code,
+            version_name=self.android_update_version_name,
+            release_notes=self.android_update_release_notes,
+            apk_url=self.android_update_apk_url,
+            apk_sha256=self.android_update_apk_sha256,
+        )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

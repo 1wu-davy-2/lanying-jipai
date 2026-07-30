@@ -1,5 +1,8 @@
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from app.config import Settings
 from app.main import app
 
 
@@ -44,7 +47,10 @@ def test_latest_android_release_returns_forced_manifest(monkeypatch) -> None:
     }
 
 
-def test_latest_android_release_rejects_invalid_configured_manifest(monkeypatch) -> None:
+def test_settings_rejects_invalid_enabled_android_release_config(monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///test.db")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-jwt-secret-at-least-thirty-two-bytes")
+    monkeypatch.setenv("AES_KEY", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
     monkeypatch.setenv("ANDROID_UPDATE_VERSION_CODE", "2")
     monkeypatch.setenv("ANDROID_UPDATE_VERSION_NAME", "1.1.0")
     monkeypatch.setenv(
@@ -54,11 +60,5 @@ def test_latest_android_release_rejects_invalid_configured_manifest(monkeypatch)
     monkeypatch.setenv("ANDROID_UPDATE_APK_SHA256", "not-a-sha256")
     monkeypatch.setenv("ANDROID_UPDATE_RELEASE_NOTES", "Security and stability improvements.")
 
-    response = TestClient(app).get("/api/app-releases/android/latest")
-
-    assert response.status_code == 500
-    assert response.json() == {
-        "code": 500,
-        "message": "Android update configuration is invalid",
-        "data": None,
-    }
+    with pytest.raises(ValidationError, match="apk_sha256"):
+        Settings(_env_file=None)
