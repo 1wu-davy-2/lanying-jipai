@@ -83,7 +83,7 @@ describe("App", () => {
 
     const navigation = screen.getByRole("navigation", { name: "达人导航" });
     expect(navigation).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "抢单" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "订单大厅" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "订单" })).toBeInTheDocument();
   });
 

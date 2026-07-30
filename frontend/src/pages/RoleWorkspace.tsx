@@ -25,7 +25,7 @@ import { AdminWithdrawalsPage } from "./admin/AdminWithdrawalsPage";
 const labels: Record<UserRole, string> = { merchant: "商家工作台", model: "达人工作台", admin: "管理工作台" };
 const navigation: Record<UserRole, { key: string; label: string }[]> = {
   merchant: [{ key: "orders", label: "我的订单" }, { key: "profile", label: "店铺资料" }],
-  model: [{ key: "hall", label: "抢单大厅" }, { key: "ranking", label: "达人榜单" }, { key: "orders", label: "我的订单" }, { key: "wallet", label: "我的钱包" }, { key: "profile", label: "个人资料" }],
+  model: [{ key: "hall", label: "订单大厅" }, { key: "ranking", label: "达人榜单" }, { key: "orders", label: "我的订单" }, { key: "wallet", label: "我的钱包" }, { key: "profile", label: "个人资料" }],
   admin: [{ key: "operations", label: "运营发单" }, { key: "applications", label: "接单申请" }, { key: "dashboard", label: "数据看板" }, { key: "users", label: "用户管理" }, { key: "orders", label: "订单监控" }, { key: "disputes", label: "争议处理" }, { key: "withdrawals", label: "提现审核" }],
 };
 
@@ -56,7 +56,7 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
   const adminDisputesRoute = role === "admin" && currentPage === "disputes";
   const adminWithdrawalsRoute = role === "admin" && currentPage === "withdrawals";
   const talentMobileNavigation = [
-    { key: "hall", label: "抢单", icon: <AppstoreOutlined /> },
+    { key: "hall", label: "订单大厅", icon: <AppstoreOutlined /> },
     { key: "ranking", label: "榜单", icon: <TrophyOutlined /> },
     { key: "orders", label: "订单", icon: <FileTextOutlined /> },
     { key: "wallet", label: "钱包", icon: <WalletOutlined /> },
@@ -77,7 +77,7 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
           <span>{session?.user.nickname}</span>
           <Button type="text" icon={<LogoutOutlined />} onClick={logout}>退出</Button>
         </Layout.Header>
-        {role === "model" && <div className="talent-mobile-header"><strong>蓝影寄拍</strong><span>{session?.user.nickname}</span><Button type="text" icon={<LogoutOutlined />} aria-label="退出登录" onClick={logout} /></div>}
+        {role === "model" && <div className="talent-mobile-header"><strong>蓝鹰寄拍</strong><span>{session?.user.nickname}</span><Button type="text" icon={<LogoutOutlined />} aria-label="退出登录" onClick={logout} /></div>}
         <Layout.Content className="workspace-content">{modelOnboardingRoute ? <TalentOnboardingPage /> : hallOrderId ? <MarketplaceOrderDetailPage orderId={hallOrderId} /> : orderId ? <OrderDetailPage role={role} orderId={orderId} /> : modelWithdrawRoute ? <WithdrawalApplyPage /> : profileRoute ? <ProfilePage role={role} /> : merchantOrdersRoute ? <MerchantOrdersPage /> : modelHallRoute ? <ModelHallPage /> : modelRankingRoute ? <TalentRankingPage /> : modelOrdersRoute ? <ModelOrdersPage /> : modelWalletRoute ? <WalletPage /> : adminOperationsRoute ? <AdminOperationsPage /> : adminApplicationsRoute ? <AdminApplicationsPage /> : adminDashboardRoute ? <AdminDashboardPage /> : adminUsersRoute ? <AdminUsersPage /> : adminOrdersRoute ? <AdminOrdersPage /> : adminDisputesRoute ? <AdminDisputesPage /> : adminWithdrawalsRoute ? <AdminWithdrawalsPage /> : <Typography.Title level={2}>{labels[role]}</Typography.Title>}</Layout.Content>
       </Layout>
       {role === "model" && <nav className="talent-mobile-nav" aria-label="达人导航">{talentMobileNavigation.map((item) => <button type="button" aria-label={item.label} className={currentPage === item.key || (orderId && item.key === "orders") || (hallOrderId && item.key === "hall") || (modelWithdrawRoute && item.key === "wallet") ? "active" : ""} key={item.key} onClick={() => navigate(`/model/${item.key}`)}>{item.icon}<span>{item.label}</span></button>)}</nav>}
