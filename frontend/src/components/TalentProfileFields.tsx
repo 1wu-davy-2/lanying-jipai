@@ -1,7 +1,7 @@
 import { CameraOutlined, PlusOutlined } from "@ant-design/icons";
 import { Avatar, Cascader, Col, Form, Input, InputNumber, Row, Typography, Upload, message } from "antd";
 import type { UploadFile, UploadProps } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { uploadFile } from "../api/orders";
 import { SHIPPING_ADDRESS_OPTIONS } from "../constants/shippingAddresses";
@@ -10,32 +10,64 @@ function filesFromUrls(urls: string[]) {
   return urls.map((url) => ({ uid: url, name: url.split("/").pop() ?? "作品照片", status: "done" as const, url }));
 }
 
+function uploadedUrls(files: UploadFile[]) {
+  return files
+    .filter((item) => item.status === "done")
+    .map((item) => item.url)
+    .filter((url): url is string => Boolean(url));
+}
+
+function sameUrls(left: string[], right: string[]) {
+  return left.length === right.length && left.every((url, index) => url === right[index]);
+}
+
 function ImageUploader({ value, onChange, maxCount, label }: { value?: string[]; onChange?: (urls: string[]) => void; maxCount: number; label: string }) {
   const [files, setFiles] = useState<UploadFile[]>(() => filesFromUrls(value ?? []));
+  const filesRef = useRef(files);
+
+  const updateFiles = (next: UploadFile[]) => {
+    filesRef.current = next;
+    setFiles(next);
+  };
 
   useEffect(() => {
-    setFiles(filesFromUrls(value ?? []));
+    const urls = value ?? [];
+    if (!sameUrls(uploadedUrls(filesRef.current), urls)) {
+      updateFiles(filesFromUrls(urls));
+    }
   }, [value]);
 
   const customRequest: UploadProps["customRequest"] = async ({ file, onError, onSuccess }) => {
     try {
+      const uploadedFile = file as File & { uid?: string };
+      const fileUid = uploadedFile.uid ?? uploadedFile.name;
+      if (!filesRef.current.some((item) => item.uid === fileUid) && filesRef.current.length >= maxCount) {
+        onError?.(new Error("Maximum file count reached"));
+        return;
+      }
+      if (!filesRef.current.some((item) => item.uid === fileUid)) {
+        updateFiles([
+          ...filesRef.current,
+          { uid: fileUid, name: uploadedFile.name, status: "uploading" },
+        ]);
+      }
       const result = await uploadFile(file as File);
-      setFiles((current) => {
+      const current = filesRef.current.filter((item) => item.uid !== fileUid);
         const next = [...current.filter((item) => item.uid !== result.url), { uid: result.url, name: result.url.split("/").pop() ?? "作品照片", status: "done" as const, url: result.url }];
         onChange?.(next.filter((item) => item.status === "done").map((item) => item.url).filter((url): url is string => Boolean(url)));
-        return next;
-      });
+      updateFiles(next);
       onSuccess?.({ url: result.url });
     } catch (error) {
+      updateFiles(filesRef.current.map((item) => item.uid === (file as File & { uid?: string }).uid ? { ...item, status: "error" } : item));
       message.error(error instanceof Error ? error.message : "图片上传失败");
       onError?.(error as Error);
     }
   };
 
   const handleRemove = (file: UploadFile) => {
-    const next = files.filter((item) => item.uid !== file.uid);
-    setFiles(next);
-    onChange?.(next.map((item) => item.url).filter((url): url is string => Boolean(url)));
+    const next = filesRef.current.filter((item) => item.uid !== file.uid);
+    updateFiles(next);
+    onChange?.(uploadedUrls(next));
     return true;
   };
 
@@ -45,7 +77,6 @@ function ImageUploader({ value, onChange, maxCount, label }: { value?: string[];
     fileList={files}
     customRequest={customRequest}
     multiple={maxCount > 1}
-    onChange={({ fileList }) => setFiles(fileList)}
     onRemove={handleRemove}
     maxCount={maxCount}
   >
@@ -65,11 +96,15 @@ function AvatarUploader({ value, onChange }: { value?: string; onChange?: (url: 
 
 export function PortfolioField() {
   return <Form.Item name="portfolio_urls" label="作品照片" rules={[{ required: true, type: "array", min: 6, message: "请上传至少 6 张作品照片" }]} valuePropName="value">
-    <div>
-      <ImageUploader maxCount={12} label="添加作品照片" />
-      <Typography.Text type="secondary">仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。</Typography.Text>
-    </div>
+    <PortfolioUploader />
   </Form.Item>;
+}
+
+function PortfolioUploader({ value, onChange }: { value?: string[]; onChange?: (urls: string[]) => void }) {
+  return <div>
+    <ImageUploader value={value} onChange={onChange} maxCount={12} label="添加作品照片" />
+    <Typography.Text type="secondary">仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。</Typography.Text>
+  </div>;
 }
 
 export function TalentProfileFields({ includeMeasurements = true }: { includeMeasurements?: boolean }) {
