@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AppstoreOutlined, ArrowRightOutlined, PictureOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined, PictureOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Image, Segmented, Skeleton, Space, Tag, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 
@@ -27,10 +27,11 @@ export function ModelHallPage() {
   return <section className="talent-hall">
     <header className="talent-hall-heading">
       <div>
-        <Typography.Title level={2}>接单大厅</Typography.Title>
-        <Typography.Text type="secondary">可申请订单 {data?.total ?? 0}</Typography.Text>
+        <Typography.Text className="talent-page-kicker">精选合作</Typography.Text>
+        <Typography.Title level={2}>订单大厅</Typography.Title>
+        <Typography.Text type="secondary">先看收益和要求，再选择适合自己的合作。</Typography.Text>
       </div>
-      <AppstoreOutlined className="talent-hall-icon" aria-hidden="true" />
+      <div className="talent-hall-count" aria-label={`可申请订单 ${data?.total ?? 0} 单`}><strong>{data?.total ?? 0}</strong><span>可申请订单</span></div>
     </header>
     {talentStatus && <Alert className="talent-claim-status" type={talentStatus.can_claim ? "success" : "warning"} showIcon message={`${talentStatus.level.name}：同时最多 ${talentStatus.level.max_active_orders} 单，单笔不超过 ¥${talentStatus.level.max_commission_amount}`} description={talentStatus.can_claim ? `已完成 ${talentStatus.completed_orders} 单，当前进行中 ${talentStatus.active_orders} 单。` : talentStatus.profile_complete ? "实名认证审核通过后可正式接单。" : "请先在“我的”完成头像、用户名、收货地区和至少 6 张作品照片。"} />}
     <div className="hall-category-filter" aria-label="商品分类筛选">
@@ -44,12 +45,12 @@ export function ModelHallPage() {
             {image ? <Image preview={false} src={image} alt={order.title} /> : <div className="talent-order-placeholder"><PictureOutlined /><span>{order.product_categories[0] ?? "商品"}</span></div>}
           </div>
           <div className="talent-order-body">
-            <div className="talent-order-meta"><Space size={[4, 4]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}</Space><strong>¥{order.commission_amount}</strong></div>
+            <div className="talent-order-meta"><Space size={[4, 4]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}</Space><div className="talent-order-commission"><span>佣金</span><strong>¥{order.commission_amount}</strong></div></div>
             <Typography.Title level={4} ellipsis={{ rows: 2 }}>{order.title}</Typography.Title>
             <Typography.Paragraph ellipsis={{ rows: 2 }} className="talent-order-description">{order.description}</Typography.Paragraph>
             <div className="talent-order-facts"><span>{order.quantity} 件样品</span><span>{order.required_media_count} 份素材</span><span>{order.delivery_days} 天交付</span></div>
-            <Typography.Text className="talent-order-requirement" ellipsis>{order.shoot_requirements || "按订单要求交付素材"}</Typography.Text>
-            <Button type="primary" block icon={<ArrowRightOutlined />} onClick={() => navigate(`/model/hall/${order.id}`)}>{order.application_status === "PENDING" ? "查看申请" : "查看详情并申请"}</Button>
+            <div className="talent-order-requirement"><span>交付要求</span><Typography.Text ellipsis>{order.shoot_requirements || "按订单要求交付素材"}</Typography.Text></div>
+            <Button type="primary" block icon={<ArrowRightOutlined aria-hidden="true" />} onClick={() => navigate(`/model/hall/${order.id}`)}>{order.application_status === "PENDING" ? "查看申请" : "查看详情并申请"}</Button>
           </div>
         </article>;
       })}</div> : <Empty description="该分类暂无可接订单" />}
