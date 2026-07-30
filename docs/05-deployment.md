@@ -143,3 +143,33 @@ MVP 阶段不强制上完整 CI/CD 流水线，先用最小手动/半自动流�
 - [x] 提供 Nginx 模板；HTTPS 证书申请需绑定真实域名后执行
 - [x] 提供数据库定时备份与健康检查脚本、crontab 示例
 - [ ] 走一遍安全清单 - 需在生产环境逐项验收
+
+## 11. Android 强制更新发布
+
+Android 客户端不保留 API 版本兼容窗口。每次发布新的可用 APK 后，配置更高的 `ANDROID_UPDATE_VERSION_CODE` 并重启后端；旧 APK 下次启动会停留在原生更新界面，下载并交给系统安装新包后才能继续使用。
+
+1. 递增 `frontend/android/app/build.gradle` 的 `versionCode` 和 `versionName`。新 APK 必须使用与已发布 APK 相同的签名证书，否则 Android 会拒绝覆盖安装。
+2. 在构建机复制 `frontend/android/update.properties.example` 到 `frontend/android/update.properties`，填写生产接口，例如 `https://app.example.com/api/app-releases/android/latest`。该文件已被 Git 忽略。
+3. 构建并将签名 APK 上传到版本化的 HTTPS URL，例如 `https://app.example.com/releases/lanying-jipai-1.1.0.apk`。不要覆盖同一 URL 的旧文件。
+4. 在 Linux 上计算摘要：`sha256sum lanying-jipai-1.1.0.apk`。将 64 位小写结果填入后端 `.env`：
+
+   ```dotenv
+   ANDROID_UPDATE_VERSION_CODE=2
+   ANDROID_UPDATE_VERSION_NAME=1.1.0
+   ANDROID_UPDATE_APK_URL=https://app.example.com/releases/lanying-jipai-1.1.0.apk
+   ANDROID_UPDATE_APK_SHA256=<sha256sum 输出>
+   ANDROID_UPDATE_RELEASE_NOTES=修复并优化寄拍接单体验
+   ```
+
+5. 重启后端：`systemctl restart lanying-backend`。启用了 `ANDROID_UPDATE_VERSION_CODE` 时，缺少版本名、HTTPS APK 地址、更新说明或正确 SHA-256 会让后端启动失败，避免向客户端发布损坏的清单。
+6. Nginx 需将 APK 作为 HTTPS 静态文件提供；可增加：
+
+   ```nginx
+   location /releases/ {
+       alias /opt/lanying-jipai/releases/;
+       default_type application/vnd.android.package-archive;
+       add_header X-Content-Type-Options nosniff;
+   }
+   ```
+
+7. 在安装旧版本的真机上验收：启动拦截、下载进度、未知来源授权、SHA-256 校验、系统覆盖安装和重新启动。`ANDROID_UPDATE_VERSION_CODE=0` 可关闭发布清单，供本地或维护期使用。

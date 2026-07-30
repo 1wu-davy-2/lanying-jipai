@@ -8,6 +8,8 @@
 
 **Tech Stack:** FastAPI, Pydantic Settings, pytest, Capacitor Android, Java, Android DownloadManager, Gradle, Android vector drawables.
 
+**Execution status (2026-07-30):** Tasks 1-3 and Task 4 validation are complete. The final commit and push are the remaining administrative step.
+
 ---
 
 ### Task 1: Specify and test the backend release manifest

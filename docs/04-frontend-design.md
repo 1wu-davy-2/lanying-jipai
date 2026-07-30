@@ -102,3 +102,10 @@ frontend/
 - 已完成订单大厅、订单详情、我的订单、资金账户、个人资料和入驻流程的“深海青 · 稳妥亲和”改版；管理员代商家发单和达人独立入口保持不变。
 - 使用独立 SQLite 数据库完成管理员代发单、达人入驻认证、申请、寄样、收货、素材提交、验收、入账、提现审核和转账的浏览器 E2E。
 - 已通过 Capacitor `android:sync` 和 Debug APK 构建。使用 OpenJDK 21.0.11 与 Android SDK 构建的本地产物为 `frontend/android/app/build/outputs/apk/debug/app-debug.apk`（versionCode 1、minSdk 24）；APK 不提交到仓库。
+
+## 7. Android 图标与强制更新
+
+- 启动图标采用“鹰羽印章”：浅雾绿 `#DCECE8` 背景、深海青 `#14373A` 鹰羽、行动绿 `#117A72` 羽轴和白色完成勾。Android 8+ 使用 Adaptive Icon，Android 7 使用同一图形的矢量回退资源。
+- Android 壳在 WebView 可交互前检查 `ANDROID_UPDATE_MANIFEST_URL`。服务端返回更高 `version_code` 时，原生界面只有“立即更新”，旧客户端无法进入业务页。
+- 更新包必须为 HTTPS 地址且附带 64 位小写 SHA-256。客户端经 `DownloadManager` 下载并校验摘要后才调用系统安装器；未授权未知来源安装时跳至系统授权页，返回后继续安装。
+- 本地 Web 调试不创建 `frontend/android/update.properties`，因此 `ANDROID_UPDATE_MANIFEST_URL` 默认为空并跳过检查；构建机复制 `update.properties.example` 后填入生产版本接口。

@@ -1,0 +1,2 @@
+# Copy this file to update.properties on the build machine. The real file is ignored by Git.
+androidUpdateManifestUrl=https://app.example.com/api/app-releases/android/latest

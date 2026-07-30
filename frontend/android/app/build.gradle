@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+def updateProperties = new Properties()
+def updatePropertiesFile = rootProject.file('update.properties')
+if (updatePropertiesFile.exists()) {
+    updatePropertiesFile.withInputStream { updateProperties.load(it) }
+}
+def androidUpdateManifestUrl = updateProperties.getProperty('androidUpdateManifestUrl', '')
+def escapedAndroidUpdateManifestUrl = androidUpdateManifestUrl.replace('\\', '\\\\').replace('"', '\\"')
+
 android {
     namespace = "com.lanying.jipai"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -9,12 +17,16 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        buildConfigField "String", "ANDROID_UPDATE_MANIFEST_URL", "\"${escapedAndroidUpdateManifestUrl}\""
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    buildFeatures {
+        buildConfig true
     }
     buildTypes {
         release {

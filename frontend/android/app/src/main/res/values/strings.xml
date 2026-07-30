@@ -4,4 +4,13 @@
     <string name="title_activity_main">蓝影寄拍</string>
     <string name="package_name">com.lanying.jipai</string>
     <string name="custom_url_scheme">com.lanying.jipai</string>
+    <string name="update_checking_title">正在检查新版本</string>
+    <string name="update_checking_message">请稍候…</string>
+    <string name="update_required_title">需要更新应用</string>
+    <string name="update_required_message">蓝鹰寄拍 %1$s 已发布。%2$s</string>
+    <string name="update_now">立即更新</string>
+    <string name="update_retry">重新下载</string>
+    <string name="update_downloading_message">正在下载新版本：%1$d%%</string>
+    <string name="update_verifying_message">正在校验安装包…</string>
+    <string name="update_download_failed_message">下载或校验失败，请重新下载后继续使用。</string>
 </resources>
