@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     minio_public_base_url: str | None = None
     cos_backup_enabled: bool = False
     media_backup_retry_base_minutes: int = 15
+    android_update_version_code: int = 0
+    android_update_version_name: str | None = None
+    android_update_apk_url: str | None = None
+    android_update_apk_sha256: str | None = None
+    android_update_release_notes: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

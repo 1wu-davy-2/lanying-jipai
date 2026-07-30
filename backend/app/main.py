@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, uploads_directory
 from app.routers.admin import router as admin_router
+from app.routers.app_releases import router as app_releases_router
 from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
 from app.routers.orders import router as orders_router
@@ -58,6 +59,7 @@ async def unhandled_exception_handler(_: Request, __: Exception) -> JSONResponse
     return JSONResponse(status_code=500, content={"code": 500, "message": "服务器内部错误", "data": None})
 
 app.include_router(health_router, prefix="/api")
+app.include_router(app_releases_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(admin_users_router, prefix="/api")
