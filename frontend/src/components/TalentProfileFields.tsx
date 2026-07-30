@@ -109,24 +109,36 @@ function PortfolioUploader({ value, onChange }: { value?: string[]; onChange?: (
 
 export function TalentProfileFields({ includeMeasurements = true }: { includeMeasurements?: boolean }) {
   return <>
-    <Row gutter={16} align="middle">
-      <Col flex="96px"><AvatarField /></Col>
-      <Col flex="auto"><Form.Item name="nickname" label="用户名" rules={[{ required: true, min: 2, message: "请输入至少 2 个字符的用户名" }]}><Input maxLength={50} placeholder="展示给商家的达人名称" /></Form.Item></Col>
-    </Row>
-    {includeMeasurements && <Row gutter={12}>
-      <Col xs={12}><Form.Item name="height_cm" label="身高（cm）"><InputNumber min={1} max={300} className="field-full" /></Form.Item></Col>
-      <Col xs={12}><Form.Item name="weight_kg" label="体重（kg）"><InputNumber min={1} max={500} className="field-full" /></Form.Item></Col>
-    </Row>}
-    <Form.Item name="skill_tags" label="技能标签"><Input placeholder="例如：平面模特、服饰、美妆" /></Form.Item>
-    <Form.Item name="receive_address" label="收货地区" rules={[{ required: true, type: "array", len: 3, message: "请选择完整的省、市、区" }]}>
-      <Cascader options={SHIPPING_ADDRESS_OPTIONS} placeholder="选择省 / 市 / 区" className="field-full" />
-    </Form.Item>
-    <Row gutter={12}>
-      <Col xs={12}><Form.Item name="receiver_name" label="收件人姓名" rules={[{ required: true, min: 2, message: "请输入收件人姓名" }]}><Input autoComplete="name" /></Form.Item></Col>
-      <Col xs={12}><Form.Item name="receiver_phone" label="收件人手机号" rules={[{ required: true, min: 6, message: "请输入收件人手机号" }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item></Col>
-    </Row>
-    <Form.Item name="receive_address_detail" label="详细收货地址" rules={[{ required: true, message: "请输入小区、楼栋和门牌号" }]}><Input placeholder="例如：蓝影花园 3 栋 1202 室" autoComplete="street-address" /></Form.Item>
-    <PortfolioField />
+    <section className="talent-form-section">
+      <div className="talent-form-section-heading"><Typography.Title level={4}>基本资料</Typography.Title><Typography.Text type="secondary">用于展示你的达人身份。</Typography.Text></div>
+      <Row gutter={16} align="middle">
+        <Col flex="96px"><AvatarField /></Col>
+        <Col flex="auto"><Form.Item name="nickname" label="用户名" rules={[{ required: true, min: 2, message: "请输入至少 2 个字符的用户名" }]}><Input maxLength={50} placeholder="展示给商家的达人名称" /></Form.Item></Col>
+      </Row>
+    </section>
+    <section className="talent-form-section">
+      <div className="talent-form-section-heading"><Typography.Title level={4}>接单能力</Typography.Title><Typography.Text type="secondary">帮助运营人员判断适配的订单。</Typography.Text></div>
+      {includeMeasurements && <Row gutter={12}>
+        <Col xs={12}><Form.Item name="height_cm" label="身高（cm）"><InputNumber min={1} max={300} className="field-full" /></Form.Item></Col>
+        <Col xs={12}><Form.Item name="weight_kg" label="体重（kg）"><InputNumber min={1} max={500} className="field-full" /></Form.Item></Col>
+      </Row>}
+      <Form.Item name="skill_tags" label="技能标签"><Input placeholder="例如：平面模特、服饰、美妆" /></Form.Item>
+    </section>
+    <section className="talent-form-section">
+      <div className="talent-form-section-heading"><Typography.Title level={4}>收货信息</Typography.Title><Typography.Text type="secondary">仅用于接单后的样品寄送。</Typography.Text></div>
+      <Form.Item name="receive_address" label="收货地区" rules={[{ required: true, type: "array", len: 3, message: "请选择完整的省、市、区" }]}>
+        <Cascader options={SHIPPING_ADDRESS_OPTIONS} placeholder="选择省 / 市 / 区" className="field-full" />
+      </Form.Item>
+      <Row gutter={12}>
+        <Col xs={12}><Form.Item name="receiver_name" label="收件人姓名" rules={[{ required: true, min: 2, message: "请输入收件人姓名" }]}><Input autoComplete="name" /></Form.Item></Col>
+        <Col xs={12}><Form.Item name="receiver_phone" label="收件人手机号" rules={[{ required: true, min: 6, message: "请输入收件人手机号" }]}><Input inputMode="tel" autoComplete="tel" /></Form.Item></Col>
+      </Row>
+      <Form.Item name="receive_address_detail" label="详细收货地址" rules={[{ required: true, message: "请输入小区、楼栋和门牌号" }]}><Input placeholder="例如：蓝影花园 3 栋 1202 室" autoComplete="street-address" /></Form.Item>
+    </section>
+    <section className="talent-form-section">
+      <div className="talent-form-section-heading"><Typography.Title level={4}>作品集</Typography.Title><Typography.Text type="secondary">上传清晰作品，便于审核和匹配订单。</Typography.Text></div>
+      <PortfolioField />
+    </section>
   </>;
 }
 

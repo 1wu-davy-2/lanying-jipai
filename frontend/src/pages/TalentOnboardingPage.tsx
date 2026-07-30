@@ -84,8 +84,8 @@ export function TalentOnboardingPage() {
   }
 
   return <section className="talent-onboarding">
-    <div className="page-heading"><div><Typography.Title level={2}>达人入驻</Typography.Title><Typography.Text type="secondary">完成资料和实名认证后，才能正式接单。</Typography.Text></div></div>
-    <Steps current={verificationStep ? 1 : 0} items={[{ title: "完善资料", description: "头像、地区、作品" }, { title: "实名认证", description: "审核通过后接单" }]} />
+    <div className="page-heading talent-onboarding-heading"><div><Typography.Text className="talent-page-kicker">入驻准备</Typography.Text><Typography.Title level={2}>达人入驻</Typography.Title><Typography.Text type="secondary">完成资料和实名认证后，才能正式接单。</Typography.Text></div></div>
+    <Steps className="talent-onboarding-steps" current={verificationStep ? 1 : 0} items={[{ title: "完善资料", description: "资料、收货信息、作品集" }, { title: "实名认证", description: "审核通过后即可接单" }]} />
     <Card className="content-card talent-onboarding-panel" title={verificationStep ? "实名认证" : "接单资料"}>
       {verificationStep ? <>
         {data?.verify_status === "rejected" && <Alert type="error" showIcon message="认证被驳回" description={data.verify_reject_reason || "请核对资料后重新提交"} />}
