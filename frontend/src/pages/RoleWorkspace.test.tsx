@@ -9,6 +9,10 @@ vi.mock("./orders/ModelHallPage", () => ({
   ModelHallPage: () => <h1>订单大厅内容</h1>,
 }));
 
+vi.mock("./admin/AdminScriptsPage", () => ({
+  AdminScriptsPage: () => <h1>话术库内容</h1>,
+}));
+
 afterEach(() => {
   useAuthStore.setState({ session: null });
 });
@@ -34,5 +38,25 @@ describe("RoleWorkspace", () => {
     const mobileNavigation = screen.getByRole("navigation", { name: "达人导航" });
     expect(within(mobileNavigation).getByRole("button", { name: "订单大厅" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "订单大厅内容" })).toBeVisible();
+  });
+
+  it("registers the administrator script library menu and route", () => {
+    useAuthStore.setState({
+      session: {
+        access_token: "test-access-token",
+        refresh_token: "test-refresh-token",
+        token_type: "bearer",
+        user: { id: 1, phone: "1111111112", nickname: "超级管理员", role: "admin" },
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/admin/scripts"]}>
+        <RoleWorkspace role="admin" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("menuitem", { name: "话术库" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "话术库内容" })).toBeVisible();
   });
 });

@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     android_update_apk_url: str | None = None
     android_update_apk_sha256: str | None = None
     android_update_release_notes: str | None = None
+    bootstrap_admin_enabled: bool = True
+    bootstrap_admin_phone: str = "1111111112"
+    bootstrap_admin_password: str = "admin@123"
+    bootstrap_admin_nickname: str = "超级管理员"
 
     @model_validator(mode="after")
     def validate_enabled_android_update(self) -> "Settings":

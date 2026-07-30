@@ -8,6 +8,9 @@ from alembic import op
 import sqlalchemy as sa
 
 
+ID_TYPE = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
+
+
 revision = "20260802_10"
 down_revision = "20260801_09"
 branch_labels = None
@@ -24,12 +27,12 @@ def upgrade() -> None:
         batch.add_column(sa.Column("return_required", sa.Boolean(), nullable=False, server_default=sa.true()))
     op.create_table(
         "order_applications",
-        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("order_id", sa.Integer(), sa.ForeignKey("orders.id"), nullable=False),
-        sa.Column("model_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("id", ID_TYPE, primary_key=True, autoincrement=True),
+        sa.Column("order_id", ID_TYPE, sa.ForeignKey("orders.id"), nullable=False),
+        sa.Column("model_id", ID_TYPE, sa.ForeignKey("users.id"), nullable=False),
         sa.Column("message", sa.String(length=300), nullable=True),
         sa.Column("status", sa.String(length=20), nullable=False, server_default="PENDING"),
-        sa.Column("reviewer_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("reviewer_id", ID_TYPE, sa.ForeignKey("users.id"), nullable=True),
         sa.Column("review_reason", sa.String(length=255), nullable=True),
         sa.Column("reviewed_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),

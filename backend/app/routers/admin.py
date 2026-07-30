@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import require_role
 from app.models.order import Order, OrderApplication, OrderLog
+from app.models.script import ScriptCategory, ScriptDocument
 from app.models.user import User
 from app.models.wallet import Withdrawal
 from app.routers.orders import get_order, new_published_order, serialize_order
@@ -18,6 +19,99 @@ from app.services.talent_level import talent_status
 from app.services.wallet_service import WalletConflictError, complete_order_and_settle
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def serialize_script_category(category: ScriptCategory) -> dict[str, object]:
+    return {
+        "id": category.id,
+        "code": category.code,
+        "name": category.name,
+        "description": category.description,
+        "is_restricted": category.is_restricted,
+    }
+
+
+def serialize_script_document(document: ScriptDocument, include_body: bool = False) -> dict[str, object]:
+    data: dict[str, object] = {
+        "id": document.id,
+        "title": document.title,
+        "source_key": document.source_key,
+        "source_filename": document.source_filename,
+        "section_count": document.section_count,
+        "copy_block_count": document.copy_block_count,
+        "category": serialize_script_category(document.category),
+    }
+    if include_body:
+        data["markdown_body"] = document.markdown_body
+    return data
+
+
+@router.get("/scripts/categories")
+def list_script_categories(
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    categories = list(session.scalars(select(ScriptCategory).order_by(ScriptCategory.display_order.asc())))
+    return {"code": 0, "message": "ok", "data": [serialize_script_category(category) for category in categories]}
+
+
+@router.get("/scripts")
+def list_scripts(
+    category: str | None = None,
+    keyword: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    statement = select(ScriptDocument).join(ScriptCategory)
+    count_statement = select(func.count()).select_from(ScriptDocument).join(ScriptCategory)
+    filters = []
+    if category:
+        filters.append(ScriptCategory.code == category)
+    normalized_keyword = (keyword or "").strip()
+    if normalized_keyword:
+        filters.append(
+            or_(
+                ScriptCategory.name.contains(normalized_keyword),
+                ScriptDocument.title.contains(normalized_keyword),
+                ScriptDocument.source_filename.contains(normalized_keyword),
+                ScriptDocument.markdown_body.contains(normalized_keyword),
+            )
+        )
+    if filters:
+        statement = statement.where(*filters)
+        count_statement = count_statement.where(*filters)
+    total = session.scalar(count_statement) or 0
+    documents = list(
+        session.scalars(
+            statement.order_by(ScriptCategory.display_order.asc(), ScriptDocument.id.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    )
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "items": [serialize_script_document(document) for document in documents],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        },
+    }
+
+
+@router.get("/scripts/{document_id}")
+def read_script_document(
+    document_id: int,
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    document = session.get(ScriptDocument, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="话术文档不存在")
+    return {"code": 0, "message": "ok", "data": serialize_script_document(document, include_body=True)}
 
 
 def serialize_application(application: OrderApplication, session: Session) -> dict[str, object]:

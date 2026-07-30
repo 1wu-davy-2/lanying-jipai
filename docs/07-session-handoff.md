@@ -189,3 +189,12 @@ git -c http.sslBackend=openssl push -u origin dev
 ```
 
 该选项只作用于该次命令，未修改全局 Git TLS 配置，也未关闭证书校验。
+
+## 2026-07-30 补充：平台初始化与管理端话术库
+
+- 管理端新增“话术库”菜单与 `/admin/scripts` 页面：按分类查看话术文档，支持文档搜索、12 个章节目录检索、话术全文检索、每页 6 条分页和一键复制。
+- 后端新增管理员话术库接口：`GET /api/admin/scripts/categories`、`GET /api/admin/scripts`、`GET /api/admin/scripts/{id}`；全部要求 `admin` 角色。
+- 新增 `20260804_12_initial_platform_data` 迁移，初始化默认管理员 `1111111112 / admin@123`、平台名称以及最少 6 张作品照配置。应用启动也会在已完成建表的数据库中补建该管理员，但不会覆盖既有密码。
+- `backend/sql/init-mariadb.sql` 由 `python -m scripts.export_mariadb_init_sql` 从 Alembic 生成，包含完整表结构、初始管理员、平台配置和全部话术库数据。全新 MariaDB 可直接导入；已有库应执行 `alembic upgrade head`。
+- 修复 `order_applications` 在 MariaDB 下的外键 ID 类型，使其与 `users`、`orders` 的 `BIGINT` 主键一致。
+- 本轮验证：后端 `46 passed`，前端 `26 passed`，`npm run build` 成功，`POST /api/auth/login` 使用默认管理员返回 200。

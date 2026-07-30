@@ -58,7 +58,7 @@ def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:
         )
         user_id = connection.scalar(text("SELECT id FROM users WHERE phone = :phone"), {"phone": "13000000000"})
 
-    assert user_id == 1
+    assert user_id == 2
 
 
 def test_orm_identifiers_match_mariadb_bigint_migrations() -> None:
@@ -103,3 +103,26 @@ def test_script_library_migration_preserves_every_source_document(tmp_path, monk
         assert row["content_sha256"] == hashlib.sha256(body.encode("utf-8")).hexdigest()
         assert row["section_count"] == section_count == len(re.findall(r"(?m)^##\s+", body))
         assert row["copy_block_count"] == copy_block_count == len(re.findall(r"(?s)```(?:\w+)?\s*\r?\n(.*?)\r?\n```", body))
+
+
+def test_initial_platform_data_migration_creates_super_admin_and_defaults(tmp_path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'platform-defaults.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
+
+    command.upgrade(config, "head")
+
+    engine = create_engine(database_url)
+    with engine.connect() as connection:
+        admin = connection.execute(text("SELECT phone, password_hash, role, nickname FROM users WHERE phone = '1111111112'")).mappings().one()
+        configs = connection.execute(text("SELECT config_key, config_value FROM platform_configs ORDER BY config_key")).mappings().all()
+
+    from app.security import verify_password
+
+    assert admin["role"] == "admin"
+    assert admin["nickname"] == "超级管理员"
+    assert verify_password("admin@123", admin["password_hash"])
+    assert {(item["config_key"], item["config_value"]) for item in configs} >= {
+        ("platform_name", "蓝鹰寄拍"),
+        ("talent_portfolio_min_count", "6"),
+    }

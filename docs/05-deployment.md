@@ -38,7 +38,11 @@
    ./venv/bin/pip install -r requirements.txt gunicorn uvicorn[standard]
    ```
 4. 配置 `.env`（数据库连接串、JWT_SECRET、AES 加密密钥、上传目录路径等），权限设为 `600`。生产环境将 `UPLOAD_STORAGE_DRIVER=minio`，填写内部 `MINIO_*` 配置与 `MINIO_PUBLIC_BASE_URL`；Nginx 仅代理媒体域名到 MinIO。需要异地副本时再启用 `COS_BACKUP_ENABLED=true` 并填写 `COS_*`。
-5. 执行数据库迁移：`./venv/bin/alembic upgrade head`。
+5. 初始化数据库。推荐通过迁移执行，能安全升级已有数据库：`./venv/bin/alembic upgrade head`。对于全新的 MariaDB，也可直接导入仓库生成的初始化 SQL（包含表结构、默认超级管理员、平台基础配置和话术库）：
+   ```bash
+   mysql --default-character-set=utf8mb4 -u lanying_app -p lanying_jipai < sql/init-mariadb.sql
+   ```
+   该 SQL 由 `python -m scripts.export_mariadb_init_sql` 从 Alembic 自动生成；新增迁移后必须重新生成。默认管理员为 `1111111112` / `admin@123`，首次登录后必须立即修改密码。
 6. 复制仓库中的 `deploy/lanying-backend.service` 到 `/etc/systemd/system/lanying-backend.service`，确认 `User`、路径和虚拟环境名称与服务器一致：
    ```ini
    [Unit]

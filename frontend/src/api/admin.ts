@@ -30,6 +30,28 @@ export interface DashboardSummary {
   disputed_orders: number;
 }
 
+export interface ScriptCategory {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  is_restricted: boolean;
+}
+
+export interface ScriptDocumentSummary {
+  id: number;
+  title: string;
+  source_key: string;
+  source_filename: string;
+  section_count: number;
+  copy_block_count: number;
+  category: ScriptCategory;
+}
+
+export interface ScriptDocument extends ScriptDocumentSummary {
+  markdown_body: string;
+}
+
 export interface AdminOrderApplication {
   id: number;
   status: ApplicationStatus;
@@ -42,6 +64,9 @@ export interface AdminOrderApplication {
 }
 
 export function getDashboard() { return request<DashboardSummary>(client.get("/admin/dashboard/summary")); }
+export function getAdminScriptCategories() { return request<ScriptCategory[]>(client.get("/admin/scripts/categories")); }
+export function getAdminScripts(params: { category?: string; keyword?: string; page?: number; page_size?: number } = {}) { return request<Page<ScriptDocumentSummary>>(client.get("/admin/scripts", { params })); }
+export function getAdminScript(documentId: number) { return request<ScriptDocument>(client.get(`/admin/scripts/${documentId}`)); }
 export function getAdminUsers(params: Record<string, string | undefined> = {}) { return request<Page<AdminUser>>(client.get("/admin/users", { params })); }
 export function createAdminMerchant(values: { phone: string; password: string; nickname?: string; shop_name: string; shop_platform?: string; contact_phone: string; default_ship_address: string }) { return request<AdminUser>(client.post("/admin/users/merchants", values)); }
 export function updateAdminUserStatus(userId: number, status: "active" | "disabled") { return request<AdminUser>(client.put(`/admin/users/${userId}/status`, { status })); }

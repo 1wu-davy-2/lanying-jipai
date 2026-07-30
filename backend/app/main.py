@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, uploads_directory
+from app.database import get_session_factory
 from app.routers.admin import router as admin_router
 from app.routers.app_releases import router as app_releases_router
 from app.routers.auth import router as auth_router
@@ -19,8 +21,22 @@ from app.routers.wallets import admin_router as admin_wallets_router
 from app.routers.wallets import router as wallets_router
 from app.routers.withdrawals import admin_router as admin_withdrawals_router
 from app.routers.withdrawals import router as withdrawals_router
+from app.services.bootstrap import ensure_bootstrap_admin
 
-app = FastAPI(docs_url=None if os.getenv("APP_ENV") == "production" else "/docs", redoc_url=None if os.getenv("APP_ENV") == "production" else "/redoc")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    with get_session_factory()() as session:
+        ensure_bootstrap_admin(session)
+        session.commit()
+    yield
+
+
+app = FastAPI(
+    docs_url=None if os.getenv("APP_ENV") == "production" else "/docs",
+    redoc_url=None if os.getenv("APP_ENV") == "production" else "/redoc",
+    lifespan=lifespan,
+)
 
 cors_origins = [origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()]
 if cors_origins:
