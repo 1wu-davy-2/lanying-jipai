@@ -24,7 +24,7 @@
 | 任务 | 状态 | 验证 |
 | --- | --- | --- |
 | 1-5：达人端视觉、订单、账户与入驻 | 已完成 | Vitest、生产构建、桌面与手机浏览器截图 |
-| 6：Capacitor Android 同步 | 已完成同步 | `npm run android:sync` 通过；JDK 17 不满足 Gradle 的 JDK 21 要求，APK 构建待具备 JDK 21 的环境执行 |
+| 6：Capacitor Android 同步与构建 | 已完成 | `npm run android:sync` 与 `gradlew.bat assembleDebug` 通过；使用 OpenJDK 21.0.11 和本地 Android SDK 生成 Debug APK（不提交产物） |
 | 7：本地端到端验收 | 已完成 | SQLite 下管理员代发单至达人提现转账完整流程通过；后端 pytest 通过 |
 
 ## 相关文件

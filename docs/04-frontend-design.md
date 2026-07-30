@@ -101,4 +101,4 @@ frontend/
 
 - 已完成订单大厅、订单详情、我的订单、资金账户、个人资料和入驻流程的“深海青 · 稳妥亲和”改版；管理员代商家发单和达人独立入口保持不变。
 - 使用独立 SQLite 数据库完成管理员代发单、达人入驻认证、申请、寄样、收货、素材提交、验收、入账、提现审核和转账的浏览器 E2E。
-- 已通过 Capacitor `android:sync`，网页资源可同步到 Android 容器。当前机器为 JDK 17，而 Android 编译配置要求 JDK 21；`assembleDebug` 需在 JDK 21 与 Android SDK 环境中执行。
+- 已通过 Capacitor `android:sync` 和 Debug APK 构建。使用 OpenJDK 21.0.11 与 Android SDK 构建的本地产物为 `frontend/android/app/build/outputs/apk/debug/app-debug.apk`（versionCode 1、minSdk 24）；APK 不提交到仓库。
