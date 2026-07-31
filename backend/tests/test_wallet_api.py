@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.database import get_session_factory
 from app.main import app
+from app.models.media import MediaAsset
 from app.models.user import User
 from app.models.wallet import Wallet, WalletTransaction, Withdrawal
 from app.security import create_access_token, hash_password
@@ -44,7 +45,27 @@ def admin_headers() -> dict[str, str]:
         return {"Authorization": f"Bearer {create_access_token(admin.id)}"}
 
 
-def complete_order(client: TestClient, merchant_headers: dict[str, str], model_headers: dict[str, str], admin: dict[str, str]) -> int:
+def add_delivery_assets(phone: str) -> list[str]:
+    image_urls = [f"/uploads/{phone}-delivery-{index}.jpg" for index in range(6)]
+    video_url = f"/uploads/{phone}-delivery.mp4"
+    with get_session_factory()() as session:
+        model = session.scalar(select(User).where(User.phone == phone))
+        assert model is not None
+        session.add_all(
+            [MediaAsset(owner_id=model.id, url=url, content_type="image/jpeg") for url in image_urls]
+            + [MediaAsset(owner_id=model.id, url=video_url, content_type="video/mp4", duration_seconds=Decimal("6.000"))]
+        )
+        session.commit()
+    return [*image_urls, video_url]
+
+
+def complete_order(
+    client: TestClient,
+    merchant_headers: dict[str, str],
+    model_headers: dict[str, str],
+    admin: dict[str, str],
+    model_phone: str,
+) -> int:
     created = client.post(
         "/api/orders",
         headers=merchant_headers,
@@ -57,10 +78,11 @@ def complete_order(client: TestClient, merchant_headers: dict[str, str], model_h
     assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
+    submitted_media = add_delivery_assets(model_phone)
     assert client.put(
         f"/api/orders/{order_id}/submit",
         headers=model_headers,
-        json={"submitted_media": ["/uploads/asset.jpg"], "tracking_no": "SF200", "company": "顺丰"},
+        json={"submitted_media": submitted_media, "tracking_no": "SF200", "company": "顺丰"},
     ).status_code == 200
     assert client.put(f"/api/orders/{order_id}/accept", headers=merchant_headers).status_code == 200
     return order_id
@@ -73,7 +95,7 @@ def test_order_settlement_and_withdrawal_lifecycle() -> None:
     make_model_eligible("13900000003")
     model_headers = {"Authorization": f"Bearer {model_token}"}
     admin = admin_headers()
-    order_id = complete_order(client, merchant_headers, model_headers, admin)
+    order_id = complete_order(client, merchant_headers, model_headers, admin, "13900000003")
 
     wallet = client.get("/api/wallets/me", headers=model_headers)
     assert wallet.status_code == 200

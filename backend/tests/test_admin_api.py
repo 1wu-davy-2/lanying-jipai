@@ -1,10 +1,12 @@
 import json
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.database import get_session_factory
 from app.main import app
+from app.models.media import MediaAsset
 from app.models.user import User
 from app.security import create_access_token, hash_password
 
@@ -39,6 +41,20 @@ def admin_headers() -> dict[str, str]:
         return {"Authorization": f"Bearer {create_access_token(admin.id)}"}
 
 
+def add_delivery_assets(phone: str) -> list[str]:
+    image_urls = [f"/uploads/{phone}-delivery-{index}.jpg" for index in range(6)]
+    video_url = f"/uploads/{phone}-delivery.mp4"
+    with get_session_factory()() as session:
+        model = session.scalar(select(User).where(User.phone == phone))
+        assert model is not None
+        session.add_all(
+            [MediaAsset(owner_id=model.id, url=url, content_type="image/jpeg") for url in image_urls]
+            + [MediaAsset(owner_id=model.id, url=video_url, content_type="video/mp4", duration_seconds=Decimal("6.000"))]
+        )
+        session.commit()
+    return [*image_urls, video_url]
+
+
 def approve_application(client: TestClient, order_id: int, model_headers: dict[str, str], admin: dict[str, str]) -> None:
     assert client.post(f"/api/orders/{order_id}/applications", headers=model_headers, json={"message": "申请接单"}).status_code == 201
     applications = client.get("/api/admin/order-applications", headers=admin, params={"status": "PENDING"}).json()["data"]["items"]
@@ -46,13 +62,23 @@ def approve_application(client: TestClient, order_id: int, model_headers: dict[s
     assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
 
 
-def create_disputed_order(client: TestClient, merchant_headers: dict[str, str], model_headers: dict[str, str], admin: dict[str, str]) -> int:
+def create_disputed_order(
+    client: TestClient,
+    merchant_headers: dict[str, str],
+    model_headers: dict[str, str],
+    admin: dict[str, str],
+    model_phone: str,
+) -> int:
     created = client.post("/api/orders", headers=merchant_headers, json={"title": "仲裁测试订单", "description": "拍摄", "product_categories": ["\u5176\u4ed6"], "commission_amount": "88.00"})
     order_id = created.json()["data"]["id"]
     approve_application(client, order_id, model_headers, admin)
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
-    assert client.put(f"/api/orders/{order_id}/submit", headers=model_headers, json={"submitted_media": ["/uploads/asset.jpg"], "tracking_no": "SF200", "company": "顺丰"}).status_code == 200
+    assert client.put(
+        f"/api/orders/{order_id}/submit",
+        headers=model_headers,
+        json={"submitted_media": add_delivery_assets(model_phone), "tracking_no": "SF200", "company": "顺丰"},
+    ).status_code == 200
     assert client.put(f"/api/orders/{order_id}/reject", headers=merchant_headers, json={"reason": "素材不符合要求"}).status_code == 200
     return order_id
 
@@ -80,7 +106,7 @@ def test_admin_can_arbitrate_a_dispute_and_view_dashboard() -> None:
     make_model_eligible("13700000004")
     model_headers = {"Authorization": f"Bearer {model_token}"}
     admin = admin_headers()
-    order_id = create_disputed_order(client, merchant_headers, model_headers, admin)
+    order_id = create_disputed_order(client, merchant_headers, model_headers, admin, "13700000004")
 
     disputed = client.get("/api/admin/orders/disputed", headers=admin)
     assert disputed.status_code == 200
@@ -159,10 +185,11 @@ def test_admin_can_operate_orders_for_a_selected_merchant() -> None:
     approve_application(client, order_id, model_headers, admin)
     assert client.put(f"/api/admin/orders/{order_id}/ship", headers=admin, json={"tracking_no": "SF300", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
+    submitted_media = add_delivery_assets("13700000006")
     assert client.put(
         f"/api/orders/{order_id}/submit",
         headers=model_headers,
-        json={"submitted_media": ["/uploads/submitted.jpg"], "tracking_no": "SF301", "company": "顺丰"},
+        json={"submitted_media": submitted_media, "tracking_no": "SF301", "company": "顺丰"},
     ).status_code == 200
     accepted = client.put(f"/api/admin/orders/{order_id}/accept", headers=admin)
     assert accepted.status_code == 200
