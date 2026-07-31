@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_role
+from app.models.media import MediaAsset
 from app.models.order import Order, OrderApplication, OrderLog, OrderMessage
 from app.models.user import User
 from app.product_categories import PRODUCT_CATEGORIES
@@ -15,6 +16,7 @@ from app.schemas.order import (
     OrderCreateRequest,
     OrderApplicationRequest,
     OrderMessageRequest,
+    OwnedProductReviewRequest,
     RejectOrderRequest,
     ShipmentRequest,
     SubmitOrderRequest,
@@ -47,6 +49,9 @@ def serialize_order(order: Order) -> dict[str, object]:
         "delivery_days": order.delivery_days,
         "deposit_required": order.deposit_required,
         "return_required": order.return_required,
+        "product_source": order.product_source,
+        "product_subsidy_amount": str(order.product_subsidy_amount),
+        "self_keep_after_shoot": order.self_keep_after_shoot,
         "commission_amount": str(order.commission_amount),
         "deposit_amount": str(order.deposit_amount),
         "shoot_requirements": order.shoot_requirements,
@@ -112,6 +117,9 @@ def new_published_order(payload: OrderCreateRequest, merchant_id: int) -> Order:
         delivery_days=payload.delivery_days,
         deposit_required=payload.deposit_required,
         return_required=payload.return_required,
+        product_source=payload.product_source,
+        product_subsidy_amount=payload.product_subsidy_amount,
+        self_keep_after_shoot=payload.self_keep_after_shoot,
         commission_amount=payload.commission_amount,
         deposit_amount=payload.deposit_amount,
         shoot_requirements=payload.shoot_requirements,
@@ -158,6 +166,7 @@ def order_hall(
     for order in items:
         data = serialize_order(order)
         data["application_status"] = application_statuses.get(order.id)
+        data["merchant"] = public_merchant(order, session)
         serialized_items.append(data)
     return {"code": 0, "message": "ok", "data": {"items": serialized_items, "total": total, "page": page, "page_size": page_size}}
 
@@ -173,6 +182,9 @@ def public_merchant(order: Order, session: Session) -> dict[str, object] | None:
         "avatar_url": merchant.avatar_url,
         "shop_name": profile.shop_name if profile else merchant.nickname,
         "shop_platform": profile.shop_platform if profile else None,
+        "quality_merchant": profile.quality_merchant if profile else False,
+        "guarantee_deposit_paid": profile.guarantee_deposit_paid if profile else False,
+        "guarantee_deposit_amount": str(profile.guarantee_deposit_amount) if profile else "0.00",
     }
 
 
@@ -206,8 +218,32 @@ def create_application(
     reason = claim_block_reason(session, user, order.commission_amount)
     if reason:
         raise HTTPException(status_code=403, detail=reason)
-    application = OrderApplication(order_id=order.id, model_id=user.id, message=(payload.message or "").strip() or None)
-    session.add(application)
+    if order.product_source == "talent_owned" and not payload.owned_product_images:
+        raise HTTPException(status_code=422, detail="已有同款订单必须上传同款实拍图供商家审核")
+    if payload.owned_product_images:
+        owned_assets = list(
+            session.scalars(
+                select(MediaAsset).where(MediaAsset.owner_id == user.id, MediaAsset.url.in_(payload.owned_product_images))
+            )
+        )
+        if len(owned_assets) != len(set(payload.owned_product_images)) or len(payload.owned_product_images) != len(set(payload.owned_product_images)):
+            raise HTTPException(status_code=422, detail="同款实拍图必须使用本人通过平台上传的图片")
+        if any(not asset.content_type.startswith("image/") for asset in owned_assets):
+            raise HTTPException(status_code=422, detail="同款实拍图只能使用图片文件")
+    application = session.scalar(
+        select(OrderApplication).where(OrderApplication.order_id == order.id, OrderApplication.model_id == user.id)
+    )
+    if application is not None and application.status != "REJECTED":
+        raise HTTPException(status_code=409, detail="你已提交过该订单的申请")
+    if application is None:
+        application = OrderApplication(order_id=order.id, model_id=user.id)
+        session.add(application)
+    application.message = (payload.message or "").strip() or None
+    application.owned_product_images = json.dumps(payload.owned_product_images)
+    application.status = "PENDING"
+    application.reviewer_id = None
+    application.review_reason = None
+    application.reviewed_at = None
     try:
         session.commit()
     except IntegrityError as exc:
@@ -222,6 +258,7 @@ def create_application(
             "order_id": application.order_id,
             "status": application.status,
             "message": application.message,
+            "owned_product_images": payload.owned_product_images,
             "created_at": application.created_at.isoformat() if application.created_at else None,
         },
     }
@@ -282,6 +319,12 @@ def order_detail(order_id: int, user: User = Depends(get_current_user), session:
     data = serialize_order(order)
     merchant = session.get(User, order.merchant_id)
     data["merchant"] = None if merchant is None else {"id": merchant.id, "nickname": merchant.nickname, "phone": merchant.phone}
+    application = session.scalar(
+        select(OrderApplication).where(OrderApplication.order_id == order.id, OrderApplication.model_id == order.model_id)
+    )
+    if application is not None:
+        data["owned_product_images"] = json.loads(application.owned_product_images or "[]")
+        data["application_reason"] = application.review_reason
     logs = list(session.scalars(select(OrderLog).where(OrderLog.order_id == order.id).order_by(OrderLog.created_at.asc(), OrderLog.id.asc())))
     data["logs"] = [
         {
@@ -306,6 +349,8 @@ def order_detail(order_id: int, user: User = Depends(get_current_user), session:
 def ship_order(order_id: int, payload: ShipmentRequest, user: User = Depends(require_role("merchant")), session: Session = Depends(get_db)) -> dict[str, object]:
     order = get_order(session, order_id)
     ensure_order_owner(order, user, "merchant")
+    if order.product_source != "merchant_ship":
+        raise HTTPException(status_code=409, detail="达人自购或已有同款订单无需寄样")
     return advance(
         session,
         order,
@@ -327,18 +372,67 @@ def receive_order(order_id: int, user: User = Depends(require_role("model")), se
 def submit_order(order_id: int, payload: SubmitOrderRequest, user: User = Depends(require_role("model")), session: Session = Depends(get_db)) -> dict[str, object]:
     order = get_order(session, order_id)
     ensure_order_owner(order, user, "model")
+    assets = list(
+        session.scalars(
+            select(MediaAsset).where(MediaAsset.owner_id == user.id, MediaAsset.url.in_(payload.submitted_media))
+        )
+    )
+    assets_by_url = {asset.url: asset for asset in assets}
+    if len(payload.submitted_media) != len(set(payload.submitted_media)) or len(assets_by_url) != len(set(payload.submitted_media)):
+        raise HTTPException(status_code=422, detail="交付素材必须使用本人通过平台上传的文件")
+    image_count = sum(1 for url in payload.submitted_media if assets_by_url[url].content_type.startswith("image/"))
+    valid_videos = [
+        asset
+        for asset in assets_by_url.values()
+        if asset.content_type == "video/mp4" and asset.duration_seconds is not None and asset.duration_seconds > 5
+    ]
+    if image_count < order.required_media_count:
+        raise HTTPException(status_code=422, detail=f"交付素材至少需要 {order.required_media_count} 张图片")
+    if not valid_videos:
+        raise HTTPException(status_code=422, detail="交付素材必须包含至少 1 个时长大于 5 秒的 MP4 视频")
+    changes: dict[str, object] = {"submitted_media": json.dumps(payload.submitted_media)}
+    if order.return_required:
+        if not payload.tracking_no or not payload.company:
+            raise HTTPException(status_code=422, detail="需要返货时必须填写物流公司和物流单号")
+        changes.update({"return_tracking_no": payload.tracking_no, "return_company": payload.company})
     return advance(
         session,
         order,
         "RETURNED",
         user,
-        "达人已提交素材并寄回",
-        {
-            "submitted_media": json.dumps(payload.submitted_media),
-            "return_tracking_no": payload.tracking_no,
-            "return_company": payload.company,
-        },
+        "达人已提交素材并寄回" if order.return_required else "达人已提交素材，商品归达人自留",
+        changes,
     )
+
+
+@router.put("/{order_id}/owned-product-review")
+def review_owned_product(
+    order_id: int,
+    payload: OwnedProductReviewRequest,
+    user: User = Depends(require_role("merchant")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    order = get_order(session, order_id)
+    ensure_order_owner(order, user, "merchant")
+    if order.product_source != "talent_owned" or order.status != "CLAIMED":
+        raise HTTPException(status_code=409, detail="当前订单无需进行同款商品审核")
+    application = session.scalar(
+        select(OrderApplication).where(OrderApplication.order_id == order.id, OrderApplication.model_id == order.model_id)
+    )
+    if application is None:
+        raise HTTPException(status_code=409, detail="未找到该达人的接单申请")
+    if not payload.approved:
+        application.status = "REJECTED"
+        application.review_reason = payload.reason.strip() if payload.reason else None
+        return advance(
+            session,
+            order,
+            "PUBLISHED",
+            user,
+            "商家驳回达人同款商品，订单重新开放申请",
+            {"model_id": None},
+        )
+    return advance(session, order, "IN_PROGRESS", user, "商家已审核通过达人同款商品")
 
 
 @router.put("/{order_id}/accept")

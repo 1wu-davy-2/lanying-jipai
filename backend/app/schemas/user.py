@@ -1,6 +1,7 @@
+from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -63,3 +64,17 @@ class VerifyReviewRequest(BaseModel):
 
 class UserStatusUpdateRequest(BaseModel):
     status: Literal["active", "disabled"]
+
+
+class MerchantAssuranceRequest(BaseModel):
+    quality_merchant: bool
+    guarantee_deposit_paid: bool
+    guarantee_deposit_amount: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=10, decimal_places=2)
+
+    @model_validator(mode="after")
+    def validate_guarantee_deposit(self) -> "MerchantAssuranceRequest":
+        if self.guarantee_deposit_paid and self.guarantee_deposit_amount <= 0:
+            raise ValueError("已缴纳保证金时必须填写保证金金额")
+        if not self.guarantee_deposit_paid and self.guarantee_deposit_amount != 0:
+            raise ValueError("未缴纳保证金时金额必须为 0")
+        return self

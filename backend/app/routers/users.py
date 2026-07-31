@@ -12,6 +12,7 @@ from app.models.user import MerchantProfile, ModelProfile, User
 from app.schemas.user import (
     AdminMerchantCreateRequest,
     MerchantProfileRequest,
+    MerchantAssuranceRequest,
     ModelProfileRequest,
     UserUpdateRequest,
     VerifyRequest,
@@ -48,6 +49,9 @@ def serialize_user(user: User, include_payment_details: bool = True) -> dict[str
             "shop_platform": user.merchant_profile.shop_platform,
             "contact_phone": user.merchant_profile.contact_phone,
             "default_ship_address": user.merchant_profile.default_ship_address,
+            "quality_merchant": user.merchant_profile.quality_merchant,
+            "guarantee_deposit_paid": user.merchant_profile.guarantee_deposit_paid,
+            "guarantee_deposit_amount": str(user.merchant_profile.guarantee_deposit_amount),
         }
     if user.model_profile:
         data["model_profile"] = {
@@ -210,6 +214,27 @@ def review_verification(
         raise HTTPException(status_code=400, detail="驳回认证时必须填写原因")
     user.verify_status = "verified" if payload.approved else "rejected"
     user.verify_reject_reason = None if payload.approved else payload.reason
+    session.commit()
+    return {"code": 0, "message": "ok", "data": serialize_user(user, include_payment_details=False)}
+
+
+@admin_router.put("/{user_id}/merchant-assurance")
+def update_merchant_assurance(
+    user_id: int,
+    payload: MerchantAssuranceRequest,
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    user = session.get(User, user_id)
+    if user is None or user.role != "merchant":
+        raise HTTPException(status_code=404, detail="商家不存在")
+    profile = user.merchant_profile
+    if profile is None:
+        profile = MerchantProfile(user=user, contact_phone=user.phone)
+        session.add(profile)
+    profile.quality_merchant = payload.quality_merchant
+    profile.guarantee_deposit_paid = payload.guarantee_deposit_paid
+    profile.guarantee_deposit_amount = payload.guarantee_deposit_amount
     session.commit()
     return {"code": 0, "message": "ok", "data": serialize_user(user, include_payment_details=False)}
 

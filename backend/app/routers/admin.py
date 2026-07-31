@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -121,6 +122,7 @@ def serialize_application(application: OrderApplication, session: Session) -> di
         "id": application.id,
         "status": application.status,
         "message": application.message,
+        "owned_product_images": json.loads(application.owned_product_images or "[]"),
         "review_reason": application.review_reason,
         "created_at": application.created_at.isoformat() if application.created_at else None,
         "reviewed_at": application.reviewed_at.isoformat() if application.reviewed_at else None,

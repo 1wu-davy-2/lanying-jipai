@@ -4,7 +4,7 @@ import { ArrowRightOutlined, PictureOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Image, Segmented, Skeleton, Space, Tag, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 
-import { getOrderHall } from "../../api/orders";
+import { getOrderHall, productSourceLabels } from "../../api/orders";
 import { getTalentStatus } from "../../api/users";
 import { PRODUCT_CATEGORIES, productCategoryColor } from "../../constants/productCategories";
 
@@ -45,10 +45,11 @@ export function ModelHallPage() {
             {image ? <Image preview={false} src={image} alt={order.title} /> : <div className="talent-order-placeholder"><PictureOutlined /><span>{order.product_categories[0] ?? "商品"}</span></div>}
           </div>
           <div className="talent-order-body">
-            <div className="talent-order-meta"><Space size={[4, 4]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}</Space><div className="talent-order-commission"><span>佣金</span><strong>¥{order.commission_amount}</strong></div></div>
+            <div className="talent-order-meta"><Space size={[4, 4]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}{order.merchant?.quality_merchant && <Tag color="green">优质商家</Tag>}{order.merchant?.guarantee_deposit_paid && <Tag color="gold">已缴保证金</Tag>}</Space><div className="talent-order-commission"><span>佣金</span><strong>¥{order.commission_amount}</strong></div></div>
             <Typography.Title level={4} ellipsis={{ rows: 2 }}>{order.title}</Typography.Title>
             <Typography.Paragraph ellipsis={{ rows: 2 }} className="talent-order-description">{order.description}</Typography.Paragraph>
-            <div className="talent-order-facts"><span>{order.quantity} 件样品</span><span>{order.required_media_count} 份素材</span><span>{order.delivery_days} 天交付</span></div>
+            <div className="talent-order-facts"><span>{productSourceLabels[order.product_source]}</span><span>{order.return_required ? "需要返货" : "拍完自留"}</span><span>{order.required_media_count} 张图片 + 1 视频</span><span>{order.delivery_days} 天交付</span></div>
+            {order.product_source === "talent_purchase" && <div className="talent-order-subsidy">商品补贴 ¥{order.product_subsidy_amount}，验收后与佣金一并结算</div>}
             <div className="talent-order-requirement"><span>交付要求</span><Typography.Text ellipsis>{order.shoot_requirements || "按订单要求交付素材"}</Typography.Text></div>
             <Button type="primary" block icon={<ArrowRightOutlined aria-hidden="true" />} onClick={() => navigate(`/model/hall/${order.id}`)}>{order.application_status === "PENDING" ? "查看申请" : "查看详情并申请"}</Button>
           </div>

@@ -72,17 +72,22 @@ def complete_order_and_settle(
     if order.model_id is None:
         raise WalletConflictError("订单未分配达人，无法结算")
     transition_order(session, order, "COMPLETED", operator_id, remark)
-    wallet = _change_wallet(session, order.model_id, order.commission_amount, Decimal("0.00"))
+    settlement_amount = order.commission_amount + order.product_subsidy_amount
+    wallet = _change_wallet(session, order.model_id, settlement_amount, Decimal("0.00"))
     session.add(
         WalletTransaction(
             idempotency_key=f"order:{order.id}:settlement",
             user_id=order.model_id,
             type=ORDER_SETTLEMENT,
-            amount=order.commission_amount,
+            amount=settlement_amount,
             balance_after=wallet.available_balance,
             frozen_balance_after=wallet.frozen_balance,
             order_id=order.id,
-            remark=f"订单 {order.order_no} 佣金结算",
+            remark=(
+                f"订单 {order.order_no} 佣金结算"
+                if order.product_subsidy_amount == 0
+                else f"订单 {order.order_no} 佣金 ¥{order.commission_amount} + 商品补贴 ¥{order.product_subsidy_amount}"
+            ),
         )
     )
 

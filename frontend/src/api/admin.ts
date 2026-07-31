@@ -19,6 +19,9 @@ export interface AdminUser {
     shop_platform: string | null;
     contact_phone: string;
     default_ship_address: string;
+    quality_merchant: boolean;
+    guarantee_deposit_paid: boolean;
+    guarantee_deposit_amount: string;
   } | null;
 }
 
@@ -56,6 +59,7 @@ export interface AdminOrderApplication {
   id: number;
   status: ApplicationStatus;
   message: string | null;
+  owned_product_images: string[];
   review_reason: string | null;
   created_at: string | null;
   reviewed_at: string | null;
@@ -71,6 +75,7 @@ export function getAdminUsers(params: Record<string, string | undefined> = {}) {
 export function createAdminMerchant(values: { phone: string; password: string; nickname?: string; shop_name: string; shop_platform?: string; contact_phone: string; default_ship_address: string }) { return request<AdminUser>(client.post("/admin/users/merchants", values)); }
 export function updateAdminUserStatus(userId: number, status: "active" | "disabled") { return request<AdminUser>(client.put(`/admin/users/${userId}/status`, { status })); }
 export function reviewVerification(userId: number, approved: boolean, reason?: string) { return request<AdminUser>(client.put(`/admin/users/${userId}/verify`, { approved, reason })); }
+export function updateMerchantAssurance(userId: number, values: { quality_merchant: boolean; guarantee_deposit_paid: boolean; guarantee_deposit_amount: string }) { return request<AdminUser>(client.put(`/admin/users/${userId}/merchant-assurance`, values)); }
 export function getAdminOrders(params: Record<string, string | number | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
 export function createAdminOrder(values: Record<string, unknown>) { return request<OrderItem>(client.post("/admin/orders", values)); }
 export function getAdminOrderApplications(status?: ApplicationStatus) { return request<Page<AdminOrderApplication>>(client.get("/admin/order-applications", { params: status ? { status } : undefined })); }

@@ -17,6 +17,7 @@ vi.mock("../../api/orders", () => ({
   applyForOrder: vi.fn(),
   getHallOrder: mocks.getHallOrder,
   getOrderHall: mocks.getOrderHall,
+  productSourceLabels: { merchant_ship: "商家寄样", talent_purchase: "达人自行购买", talent_owned: "达人已有同款" },
 }));
 
 vi.mock("../../api/users", () => ({
@@ -40,6 +41,9 @@ const sampleOrder = {
   delivery_days: 3,
   deposit_required: false,
   return_required: false,
+  product_source: "talent_purchase" as const,
+  product_subsidy_amount: "12.00",
+  self_keep_after_shoot: true,
   shoot_requirements: "提交 6 张以上清晰图片，包含正面、侧面和细节图。",
   status: "PUBLISHED" as const,
   ship_to_model_tracking_no: null,
@@ -50,7 +54,7 @@ const sampleOrder = {
   reject_reason: null,
   created_at: null,
   application_status: null,
-  merchant: { id: 3, nickname: "夏日服饰", shop_name: "夏日服饰旗舰店", shop_platform: "抖音" },
+  merchant: { id: 3, nickname: "夏日服饰", shop_name: "夏日服饰旗舰店", shop_platform: "抖音", quality_merchant: true, guarantee_deposit_paid: true, guarantee_deposit_amount: "500.00" },
 };
 
 function renderPage(node: ReactNode) {
@@ -84,6 +88,10 @@ describe("talent marketplace", () => {
     const orderCard = screen.getByRole("article");
     expect(orderCard.querySelector(".ant-tag")).toHaveTextContent("服饰穿搭");
     expect(within(orderCard).getByText("¥66.00")).toBeVisible();
+    expect(within(orderCard).getByText("达人自行购买")).toBeVisible();
+    expect(within(orderCard).getByText("拍完自留")).toBeVisible();
+    expect(within(orderCard).getByText("优质商家")).toBeVisible();
+    expect(within(orderCard).getByText("已缴保证金")).toBeVisible();
     expect(within(orderCard).getByText("3 天交付")).toBeVisible();
     expect(within(orderCard).getByRole("button", { name: "查看详情并申请" })).toBeVisible();
   });

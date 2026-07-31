@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, ID_TYPE
@@ -49,6 +50,9 @@ class MerchantProfile(TimestampMixin, Base):
     shop_platform: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     contact_phone: Mapped[str] = mapped_column(String(20), default="", nullable=False)
     default_ship_address: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    quality_merchant: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    guarantee_deposit_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    guarantee_deposit_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
 
     user: Mapped[User] = relationship(back_populates="merchant_profile")
 

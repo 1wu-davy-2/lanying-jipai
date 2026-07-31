@@ -1,3 +1,4 @@
+from decimal import Decimal
 from io import BytesIO
 
 from fastapi.testclient import TestClient
@@ -6,6 +7,7 @@ from sqlalchemy import select
 
 from app.main import app
 from app.database import get_session_factory
+from app.models.media import MediaAsset
 from app.models.user import User
 from app.security import create_access_token, hash_password
 
@@ -48,6 +50,30 @@ def admin_headers() -> dict[str, str]:
         return {"Authorization": f"Bearer {create_access_token(admin.id)}"}
 
 
+def add_delivery_assets(phone: str, image_count: int = 6) -> list[str]:
+    image_urls = [f"/uploads/{phone}-delivery-{index}.jpg" for index in range(image_count)]
+    video_url = f"/uploads/{phone}-delivery.mp4"
+    with get_session_factory()() as session:
+        model = session.scalar(select(User).where(User.phone == phone))
+        assert model is not None
+        session.add_all(
+            [MediaAsset(owner_id=model.id, url=url, content_type="image/jpeg") for url in image_urls]
+            + [MediaAsset(owner_id=model.id, url=video_url, content_type="video/mp4", duration_seconds=Decimal("6.000"))]
+        )
+        session.commit()
+    return [*image_urls, video_url]
+
+
+def add_short_video_asset(phone: str) -> str:
+    url = f"/uploads/{phone}-short-video.mp4"
+    with get_session_factory()() as session:
+        model = session.scalar(select(User).where(User.phone == phone))
+        assert model is not None
+        session.add(MediaAsset(owner_id=model.id, url=url, content_type="video/mp4", duration_seconds=Decimal("5.000")))
+        session.commit()
+    return url
+
+
 def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     client = TestClient(app)
     merchant_headers = {"Authorization": f"Bearer {register(client, '13300000001', 'merchant')}"}
@@ -78,10 +104,19 @@ def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
+    submitted_media = add_delivery_assets("13300000002")
+    short_video = add_short_video_asset("13300000002")
+    missing_long_video = client.put(
+        f"/api/orders/{order_id}/submit",
+        headers=model_headers,
+        json={"submitted_media": [*submitted_media[:-1], short_video], "tracking_no": "SF200", "company": "顺丰"},
+    )
+    assert missing_long_video.status_code == 422
+    assert "大于 5 秒" in missing_long_video.json()["message"]
     assert client.put(
         f"/api/orders/{order_id}/submit",
         headers=model_headers,
-        json={"submitted_media": ["/uploads/asset.jpg"], "tracking_no": "SF200", "company": "顺丰"},
+        json={"submitted_media": submitted_media, "tracking_no": "SF200", "company": "顺丰"},
     ).status_code == 200
 
     message = client.post(f"/api/orders/{order_id}/messages", headers=model_headers, json={"content": "素材已上传"})

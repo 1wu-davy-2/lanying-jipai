@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
+from app.models.media import MediaAsset
 from app.models.user import User
 from app.services.media_backup import sync_new_backup
 from app.services.media_storage import (
@@ -25,6 +26,7 @@ _ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "video/mp4"}
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".mp4"}
 _MAX_FILE_SIZE = 10 * 1024 * 1024
 _IMAGE_FORMATS = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
+_MP4_CONTAINER_TYPES = {b"moov", b"trak", b"mdia", b"minf", b"stbl", b"edts", b"udta", b"meta"}
 
 
 def content_is_valid(content: bytes, suffix: str) -> bool:
@@ -38,10 +40,52 @@ def content_is_valid(content: bytes, suffix: str) -> bool:
         return False
 
 
+def _mp4_boxes(content: bytes, start: int, end: int):
+    position = start
+    while position + 8 <= end:
+        size = int.from_bytes(content[position : position + 4], "big")
+        box_type = content[position + 4 : position + 8]
+        header_size = 8
+        if size == 1:
+            if position + 16 > end:
+                return
+            size = int.from_bytes(content[position + 8 : position + 16], "big")
+            header_size = 16
+        elif size == 0:
+            size = end - position
+        if size < header_size or position + size > end:
+            return
+        yield box_type, position + header_size, position + size
+        position += size
+
+
+def mp4_duration_seconds(content: bytes) -> float | None:
+    """Read the movie header duration without trusting client-provided metadata."""
+    for box_type, body_start, body_end in _mp4_boxes(content, 0, len(content)):
+        if box_type != b"moov":
+            continue
+        for child_type, child_start, child_end in _mp4_boxes(content, body_start, body_end):
+            if child_type != b"mvhd":
+                continue
+            body = content[child_start:child_end]
+            if not body:
+                return None
+            if body[0] == 0 and len(body) >= 20:
+                timescale = int.from_bytes(body[12:16], "big")
+                duration = int.from_bytes(body[16:20], "big")
+            elif body[0] == 1 and len(body) >= 32:
+                timescale = int.from_bytes(body[20:24], "big")
+                duration = int.from_bytes(body[24:32], "big")
+            else:
+                return None
+            return duration / timescale if timescale else None
+    return None
+
+
 @router.post("/uploads", status_code=status.HTTP_201_CREATED)
 async def upload_file(
     file: UploadFile = File(...),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     suffix = Path(file.filename or "").suffix.lower()
@@ -69,4 +113,17 @@ async def upload_file(
     if storage.backup_enabled:
         sync_new_backup(session, storage, object_key, content, file.content_type)
 
-    return {"code": 0, "message": "ok", "data": {"url": url}}
+    asset = MediaAsset(
+        owner_id=current_user.id,
+        url=url,
+        content_type=file.content_type,
+        duration_seconds=mp4_duration_seconds(content) if suffix == ".mp4" else None,
+    )
+    session.add(asset)
+    session.commit()
+
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {"url": url, "content_type": file.content_type, "duration_seconds": str(asset.duration_seconds) if asset.duration_seconds is not None else None},
+    }

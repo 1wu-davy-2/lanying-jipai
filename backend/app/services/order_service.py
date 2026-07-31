@@ -11,8 +11,9 @@ from app.services.talent_level import claim_block_reason
 
 ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "DRAFT": {"PUBLISHED"},
-    "PUBLISHED": {"CLAIMED", "CANCELLED"},
+    "PUBLISHED": {"CLAIMED", "OWNED_PRODUCT_REVIEW", "CANCELLED"},
     "CLAIMED": {"SHIPPED_TO_MODEL"},
+    "OWNED_PRODUCT_REVIEW": {"IN_PROGRESS", "PUBLISHED"},
     "SHIPPED_TO_MODEL": {"IN_PROGRESS"},
     "IN_PROGRESS": {"RETURNED"},
     "RETURNED": {"COMPLETED", "DISPUTED"},
@@ -98,11 +99,24 @@ def approve_order_application(session: Session, application: OrderApplication, r
         raise OrderConflictError(reason)
 
     now = datetime.now(timezone.utc)
+    assigned_status = (
+        "IN_PROGRESS"
+        if order.product_source == "talent_purchase"
+        else "OWNED_PRODUCT_REVIEW"
+        if order.product_source == "talent_owned"
+        else "CLAIMED"
+    )
     try:
         result = session.execute(
             update(Order)
             .where(Order.id == order.id, Order.status == "PUBLISHED")
-            .values(status="CLAIMED", model_id=application.model_id, claimed_at=now, updated_at=now)
+            .values(
+                status=assigned_status,
+                model_id=application.model_id,
+                claimed_at=now,
+                in_progress_at=now if assigned_status == "IN_PROGRESS" else None,
+                updated_at=now,
+            )
         )
         if result.rowcount != 1:
             raise OrderConflictError("订单已分配或不可审核")
@@ -123,8 +137,14 @@ def approve_order_application(session: Session, application: OrderApplication, r
                 order_id=order.id,
                 operator_id=reviewer_id,
                 from_status="PUBLISHED",
-                to_status="CLAIMED",
-                remark="运营审核通过达人申请并分配订单",
+                to_status=assigned_status,
+                remark=(
+                    "运营审核通过达人申请，达人自行购买商品后拍摄"
+                    if assigned_status == "IN_PROGRESS"
+                    else "运营审核通过达人申请，等待商家审核同款商品"
+                    if assigned_status == "OWNED_PRODUCT_REVIEW"
+                    else "运营审核通过达人申请并分配订单"
+                ),
             )
         )
         session.expire(order)
