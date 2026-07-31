@@ -9,6 +9,12 @@
 3. 在 `/opt/lanying-jipai/backend/.env` 配置数据库、JWT 和 AES 密钥，并限制权限为 `600`。
 4. 为 `deploy.sh`、`backup.sh`、`healthcheck.sh` 增加执行权限：`chmod 750 deploy/*.sh`。
 
+## HTTPS 与 Android APK
+
+`nginx.conf` 是 HTTPS 模板：先用 80 端口的 `/.well-known/acme-challenge/` 申请证书，再将证书路径和 `server_name` 替换为真实值。确认 `nginx -t` 通过后才加载 443 站点。80 端口除 ACME 校验外只跳转 HTTPS。
+
+将版本化 APK 放在 `/opt/lanying-jipai/releases/`，目录建议使用 `deploy:www-data` 与 `0750` 权限。`/releases/` 只在 HTTPS 虚拟主机下提供，支持断点续传且禁用目录列表。完整的构建、签名、清单配置和真机验收流程见 [`docs/08-android-apk-release.md`](../docs/08-android-apk-release.md)。
+
 ## 定时任务
 
 使用部署专用的受限环境文件提供数据库备份变量，不要把密码写入 crontab：

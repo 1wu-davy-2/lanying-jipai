@@ -60,6 +60,8 @@ keyPassword=<key 密码>
 
 该文件和 keystore 必须被 Git 忽略，不能发送到 GitHub、聊天工具或服务器日志。
 
+仓库提供 `frontend/android/signing.properties.example` 作为字段模板。release 构建会在 `signing.properties` 缺失或任一签名字段为空时中止，不能回退为 debug 签名。
+
 ## 4. 配置 Android 的生产接口
 
 复制 `frontend/.env.android.example` 为 `frontend/.env.android`，填写生产 HTTPS API 地址：
@@ -89,6 +91,14 @@ Set-Location android
 $env:JAVA_HOME = 'D:\jdk21\openjdk-21.0.11+10'
 .\gradlew.bat clean assembleRelease
 ```
+
+若要先验证签名保护而不生成 APK，可运行：
+
+```powershell
+.\gradlew.bat :app:signingConfigWriterRelease --no-daemon
+```
+
+缺少签名配置时，该命令应以明确错误退出；配置完成后再运行完整的 `assembleRelease`。完整构建还需要在 `local.properties` 或 `ANDROID_HOME` 中指向 Android SDK。
 
 构建成功后的 APK 路径为：
 

@@ -104,6 +104,21 @@ server {
 
 后续用 `certbot --nginx` 一键升级到 443 HTTPS 并配置自动续期。除 `/api/health` 和 `/api/auth/*` 外，现有 API 均要求登录；抢单大厅也要求达人登录。
 
+### Android APK 静态发布
+
+生产环境使用仓库的 `deploy/nginx.conf`：80 端口只提供 ACME 校验并跳转 HTTPS，443 端口才提供网页、接口和 `/releases/`。先申请证书并替换模板中的域名与证书路径，再执行 `nginx -t` 和 reload。APK 放入 `/opt/lanying-jipai/releases/`，必须使用不可变的版本文件名；该 location 已启用 APK MIME、Range 响应、`nosniff`、长期缓存和目录列表禁用。
+
+发布前后至少执行：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+curl -fI https://<APP_DOMAIN>/releases/lanying-jipai-<VERSION>.apk
+curl -fsS -r 0-1023 https://<APP_DOMAIN>/releases/lanying-jipai-<VERSION>.apk -o /dev/null
+```
+
+详细签名、版本清单和真机升级步骤见 [`08-android-apk-release.md`](08-android-apk-release.md)。
+
 ## 7. MariaDB 配置要点
 
 - 建议新建专用数据库和账号，不用 root：
