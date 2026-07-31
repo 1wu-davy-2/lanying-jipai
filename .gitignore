@@ -13,6 +13,9 @@ backend/local-debug.db
 # Frontend dependencies and builds
 frontend/node_modules/
 frontend/dist/
+frontend/.env.android
+frontend/android/signing/
+frontend/android/signing.properties
 
 # Tooling and operating system files
 *.log

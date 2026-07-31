@@ -8,6 +8,18 @@ if (updatePropertiesFile.exists()) {
 def androidUpdateManifestUrl = updateProperties.getProperty('androidUpdateManifestUrl', '')
 def escapedAndroidUpdateManifestUrl = androidUpdateManifestUrl.replace('\\', '\\\\').replace('"', '\\"')
 
+def releaseSigningProperties = new Properties()
+def releaseSigningPropertiesFile = rootProject.file('signing.properties')
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.withInputStream { releaseSigningProperties.load(it) }
+}
+def requiredReleaseSigningKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+def missingReleaseSigningKeys = requiredReleaseSigningKeys.findAll { !releaseSigningProperties.getProperty(it)?.trim() }
+def hasReleaseSigningConfig = releaseSigningPropertiesFile.exists() && missingReleaseSigningKeys.isEmpty()
+def releaseSigningErrorMessage = releaseSigningPropertiesFile.exists()
+    ? "Release signing configuration is incomplete. Missing: ${missingReleaseSigningKeys.join(', ')}."
+    : "Release signing configuration is missing. Copy signing.properties.example to signing.properties."
+
 android {
     namespace = "com.lanying.jipai"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -28,10 +40,33 @@ android {
     buildFeatures {
         buildConfig true
     }
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile rootProject.file(releaseSigningProperties.getProperty('storeFile'))
+                storePassword releaseSigningProperties.getProperty('storePassword')
+                keyAlias releaseSigningProperties.getProperty('keyAlias')
+                keyPassword releaseSigningProperties.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name in ['signingConfigWriterRelease', 'signReleaseBundle', 'packageRelease', 'assembleRelease', 'bundleRelease']) {
+        task.doFirst {
+            if (!hasReleaseSigningConfig) {
+                throw new GradleException(releaseSigningErrorMessage)
+            }
         }
     }
 }
