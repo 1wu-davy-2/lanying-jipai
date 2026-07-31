@@ -21,11 +21,11 @@ function renderWithProviders(path: string) {
 }
 
 describe("App", () => {
-  it("shows separate operations and talent entry points", () => {
+  it("shows the public platform homepage at the root route", () => {
     renderWithProviders("/");
 
-    expect(screen.getByRole("button", { name: /运营管理端/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /达人端/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /把每一次寄拍，交给清晰的流程/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "我是达人" })).toHaveAttribute("href", "/talent/register");
   });
 
   it("redirects an anonymous protected-route visitor to login", () => {
