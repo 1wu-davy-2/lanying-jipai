@@ -224,25 +224,21 @@ curl -I http://<APP_DOMAIN>/
 
 ## 7. 已有 APK 的测试与正式发布边界
 
-仓库工作区当前存在的 APK 是：
+仓库当前随 Git 提供的测试 APK 是：
 
 ```text
-frontend/android/app/build/outputs/apk/debug/app-debug.apk
+artifacts/android/lanying-jipai-debug.apk
 ```
 
-它位于 `debug` 输出目录，适合安装和连通性测试，不是正式 release 工件。该文件被 Git 忽略，因此 Linux `git clone` 后不会拥有它，必须从 Windows 构建机单独传送：
-
-```powershell
-scp .\frontend\android\app\build\outputs\apk\debug\app-debug.apk `
-  deploy@<SERVER_HOST>:/tmp/lanying-jipai-debug.apk
-```
+它由 Windows 构建机生成后复制到 `artifacts/android/`，会随 Git 推送；Linux `git clone` 后无需 Android SDK 或额外上传即可使用。它是 debug 工件，适合安装和连通性测试，不是正式 release 工件。
 
 服务器上只将它作为测试下载文件部署，不在版本清单中启用强制更新：
 
 ```bash
 sudo install -d -o deploy -g www-data -m 0750 /opt/lanying-jipai/releases/testing
-sudo install -o deploy -g www-data -m 0640 /tmp/lanying-jipai-debug.apk \
+sudo install -o deploy -g www-data -m 0640 /opt/lanying-jipai/artifacts/android/lanying-jipai-debug.apk \
   /opt/lanying-jipai/releases/testing/lanying-jipai-debug.apk
+sha256sum /opt/lanying-jipai/artifacts/android/lanying-jipai-debug.apk
 curl -fI https://<APP_DOMAIN>/releases/testing/lanying-jipai-debug.apk
 ```
 
