@@ -83,6 +83,7 @@ npm run build
 - [API 设计](docs/03-api-design.md)
 - [前端设计](docs/04-frontend-design.md)
 - [部署方案](docs/05-deployment.md)
+- [Linux 测试部署手册](docs/09-linux-test-deployment.md)
 - [执行计划](docs/06-execution-plan.md)
 
 生产环境使用 Nginx 托管前端与上传文件，并将 `/api` 反向代理给 Gunicorn/Uvicorn。详细的环境、Nginx、systemd、备份与安全要求见部署文档。
