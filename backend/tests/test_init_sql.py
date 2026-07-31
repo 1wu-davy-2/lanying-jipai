@@ -28,7 +28,7 @@ def test_mariadb_init_sql_export_contains_schema_and_seed_data(tmp_path) -> None
     assert "超级管理员" in sql
     assert "platform_name" in sql
     assert "抖音运营话术库" in sql
-    assert "UPDATE alembic_version SET version_num='20260804_12'" in sql
+    assert "UPDATE alembic_version SET version_num='20260805_13'" in sql
 
     tracked_sql = (backend_root / "sql" / "init-mariadb.sql").read_text(encoding="utf-8")
     assert tracked_sql == sql
@@ -38,6 +38,6 @@ def test_mariadb_init_sql_export_contains_schema_and_seed_data(tmp_path) -> None
         "CREATE TABLE script_documents",
         "1111111112",
         "talent_portfolio_min_count",
-        "UPDATE alembic_version SET version_num='20260804_12'",
+        "UPDATE alembic_version SET version_num='20260805_13'",
     ):
         assert required_fragment in tracked_sql

@@ -1949,3 +1949,36 @@ INSERT INTO platform_configs (config_key, config_value, description)
 
 UPDATE alembic_version SET version_num='20260804_12' WHERE alembic_version.version_num = '20260803_11';
 
+-- Running upgrade 20260804_12 -> 20260805_13
+
+ALTER TABLE orders ADD COLUMN product_source VARCHAR(30) NOT NULL DEFAULT 'merchant_ship';
+
+ALTER TABLE orders ADD COLUMN product_subsidy_amount NUMERIC(10, 2) NOT NULL DEFAULT '0.00';
+
+ALTER TABLE orders ADD COLUMN self_keep_after_shoot BOOL NOT NULL DEFAULT false;
+
+ALTER TABLE order_applications ADD COLUMN owned_product_images TEXT;
+
+ALTER TABLE merchant_profiles ADD COLUMN quality_merchant BOOL NOT NULL DEFAULT false;
+
+ALTER TABLE merchant_profiles ADD COLUMN guarantee_deposit_paid BOOL NOT NULL DEFAULT false;
+
+ALTER TABLE merchant_profiles ADD COLUMN guarantee_deposit_amount NUMERIC(10, 2) NOT NULL DEFAULT '0.00';
+
+CREATE TABLE media_assets (
+    id BIGINT NOT NULL AUTO_INCREMENT, 
+    owner_id BIGINT NOT NULL, 
+    url VARCHAR(512) NOT NULL, 
+    content_type VARCHAR(100) NOT NULL, 
+    duration_seconds NUMERIC(10, 3), 
+    created_at DATETIME NOT NULL DEFAULT now(), 
+    updated_at DATETIME NOT NULL DEFAULT now(), 
+    PRIMARY KEY (id), 
+    FOREIGN KEY(owner_id) REFERENCES users (id), 
+    UNIQUE (url)
+);
+
+CREATE INDEX ix_media_assets_owner_id ON media_assets (owner_id);
+
+UPDATE alembic_version SET version_num='20260805_13' WHERE alembic_version.version_num = '20260804_12';
+
