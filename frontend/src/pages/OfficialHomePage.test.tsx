@@ -1,10 +1,23 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OfficialHomePage } from "./OfficialHomePage";
 
+const mocks = vi.hoisted(() => ({
+  getLatestAndroidRelease: vi.fn(),
+  navigateCurrentWindow: vi.fn(),
+}));
+
+vi.mock("../api/appReleases", () => mocks);
+vi.mock("../utils/navigation", () => ({ navigateCurrentWindow: mocks.navigateCurrentWindow }));
+
 describe("OfficialHomePage", () => {
+  beforeEach(() => {
+    mocks.getLatestAndroidRelease.mockReset();
+    mocks.navigateCurrentWindow.mockReset();
+  });
+
   it("presents the platform proposition and both primary paths", () => {
     render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
 
@@ -24,13 +37,41 @@ describe("OfficialHomePage", () => {
     expect(screen.getByText(/不要求专业摄影棚/)).toBeVisible();
   });
 
-  it("shows an in-development notice for each download channel", () => {
+  it("explains when the Android App has not been released and keeps the mini-program notice", async () => {
+    mocks.getLatestAndroidRelease.mockResolvedValue(null);
     render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
 
     fireEvent.click(screen.getByRole("button", { name: "下载 Android App" }));
-    expect(screen.getByRole("status")).toHaveTextContent(/Android App.*正在开发中/);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Android App 暂未发布，请稍后再试。"));
+    expect(mocks.getLatestAndroidRelease).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: "打开微信小程序" }));
     expect(screen.getByRole("status")).toHaveTextContent(/微信小程序.*正在开发中/);
+  });
+
+  it("explains when the Android release service is unavailable", async () => {
+    mocks.getLatestAndroidRelease.mockRejectedValue(new Error("network unavailable"));
+    render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole("button", { name: "下载 Android App" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Android App 下载服务暂不可用，请稍后再试。"));
+  });
+
+  it("navigates to the APK URL from the latest Android release", async () => {
+    mocks.getLatestAndroidRelease.mockResolvedValue({
+      platform: "android",
+      version_code: 2,
+      version_name: "1.0.1",
+      force_update: true,
+      release_notes: "修复已知问题",
+      apk_url: "https://downloads.example.com/lanying-jipai-1.0.1.apk",
+      apk_sha256: "a".repeat(64),
+    });
+    render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole("button", { name: "下载 Android App" }));
+
+    await waitFor(() => expect(mocks.navigateCurrentWindow).toHaveBeenCalledWith("https://downloads.example.com/lanying-jipai-1.0.1.apk"));
   });
 });

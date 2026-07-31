@@ -11,6 +11,9 @@ import {
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 
+import { getLatestAndroidRelease } from "../api/appReleases";
+import { navigateCurrentWindow } from "../utils/navigation";
+
 const highlights = [
   {
     number: "01",
@@ -93,9 +96,26 @@ export function OfficialHomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [developmentNotice, setDevelopmentNotice] = useState<string | null>(null);
+  const [isAndroidDownloadPending, setIsAndroidDownloadPending] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
   const showDevelopmentNotice = (channel: string) => setDevelopmentNotice(`${channel} 正在开发中，敬请期待。`);
+  const downloadAndroidApp = async () => {
+    setDevelopmentNotice(null);
+    setIsAndroidDownloadPending(true);
+    try {
+      const release = await getLatestAndroidRelease();
+      if (!release) {
+        setDevelopmentNotice("Android App 暂未发布，请稍后再试。");
+        return;
+      }
+      navigateCurrentWindow(release.apk_url);
+    } catch {
+      setDevelopmentNotice("Android App 下载服务暂不可用，请稍后再试。");
+    } finally {
+      setIsAndroidDownloadPending(false);
+    }
+  };
 
   return <main className="official-page">
     <header className="official-header">
@@ -194,7 +214,7 @@ export function OfficialHomePage() {
         <p>Android App 和微信小程序正在准备中。等它们就绪后，订单进展与协作消息也能随时查看。</p>
       </div>
       <div className="official-download-options">
-        <button className="official-download-option official-download-android" type="button" aria-label="下载 Android App" onClick={() => showDevelopmentNotice("Android App")}>
+        <button className="official-download-option official-download-android" type="button" aria-label="下载 Android App" aria-busy={isAndroidDownloadPending} disabled={isAndroidDownloadPending} onClick={downloadAndroidApp}>
           <span className="official-download-icon" aria-hidden="true"><AndroidOutlined /></span>
           <span className="official-download-label"><strong>Android App</strong><small>即将提供 APK 下载</small></span>
           <ArrowRightOutlined aria-hidden />
