@@ -1,4 +1,21 @@
-from app.config import Settings
+from app.config import Settings, alembic_database_url
+
+
+def test_alembic_database_url_escapes_configparser_percent_characters(monkeypatch) -> None:
+    database_url = (
+        "mysql+pymysql://demo:demo%40123456@db.example:3306/jipai?charset=utf8mb4"
+    )
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-jwt-placeholder")
+    monkeypatch.setenv("AES_KEY", "test-aes-placeholder")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.database_url == database_url
+
+    assert alembic_database_url(settings.database_url) == (
+        "mysql+pymysql://demo:demo%%40123456@db.example:3306/jipai?charset=utf8mb4"
+    )
 
 
 def test_settings_reads_required_values_from_environment(monkeypatch) -> None:

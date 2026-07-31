@@ -17,6 +17,11 @@ def uploads_directory() -> Path:
     return configured if configured.is_absolute() else PROJECT_ROOT / configured
 
 
+def alembic_database_url(database_url: str) -> str:
+    """Escape percent characters at Alembic's ConfigParser boundary."""
+    return database_url.replace("%", "%%")
+
+
 class Settings(BaseSettings):
     """Runtime configuration supplied by the process environment."""
 
