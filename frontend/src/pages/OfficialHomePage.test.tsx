@@ -21,7 +21,7 @@ describe("OfficialHomePage", () => {
   it("presents the platform proposition and both primary paths", () => {
     render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
 
-    expect(screen.getByRole("heading", { name: /把每一次寄拍，交给清晰的流程/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /把每一次寄拍，\s*交给清晰的流程/ })).toBeVisible();
     expect(screen.getByRole("link", { name: "我是达人" })).toHaveAttribute("href", "/talent/register");
     expect(screen.getByRole("link", { name: "发布寄拍" })).toHaveAttribute("href", "/login");
   });

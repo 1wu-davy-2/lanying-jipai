@@ -24,7 +24,7 @@ describe("App", () => {
   it("shows the public platform homepage at the root route", () => {
     renderWithProviders("/");
 
-    expect(screen.getByRole("heading", { name: /把每一次寄拍，交给清晰的流程/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /把每一次寄拍，\s*交给清晰的流程/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "我是达人" })).toHaveAttribute("href", "/talent/register");
   });
 

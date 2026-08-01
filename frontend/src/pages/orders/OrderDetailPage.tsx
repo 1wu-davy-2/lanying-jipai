@@ -16,6 +16,21 @@ import { talentOrderNextAction } from "./talentOrderProgress";
 
 type ActionKind = "ship" | "submit" | "reject" | "owned-review" | "owned-reject";
 
+function isVideo(url: string) {
+  return /\.mp4(?:[?#]|$)/i.test(url);
+}
+
+function SubmittedMedia({ urls }: { urls: string[] }) {
+  const imageUrls = urls.filter((url) => !isVideo(url));
+  return <Image.PreviewGroup items={imageUrls}>
+    <Space wrap>
+      {urls.map((url) => isVideo(url)
+        ? <video key={url} src={url} controls preload="metadata" style={{ width: 88, height: 88, objectFit: "cover", background: "#172026" }} />
+        : <Image key={url} width={88} height={88} style={{ objectFit: "cover" }} src={url} />)}
+    </Space>
+  </Image.PreviewGroup>;
+}
+
 export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: number }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -90,7 +105,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
           { key: "return", label: "回寄物流", children: order.return_tracking_no ? `${order.return_company} ${order.return_tracking_no}` : "-" },
         ]} /></>}
         {order.owned_product_images?.length ? <><Divider /><Typography.Text strong>达人提交的同款实拍图</Typography.Text><Image.PreviewGroup items={order.owned_product_images}><Space wrap>{order.owned_product_images.map((url) => <Image key={url} width={88} height={88} style={{ objectFit: "cover" }} src={url} />)}</Space></Image.PreviewGroup></> : null}
-        {mediaUrls.length > 0 && <><Divider /><Image.PreviewGroup items={mediaUrls}><Space wrap>{mediaUrls.map((url) => <Image key={url} width={88} height={88} style={{ objectFit: "cover" }} src={url} />)}</Space></Image.PreviewGroup></>}
+        {mediaUrls.length > 0 && <><Divider /><SubmittedMedia urls={mediaUrls} /></>}
         <Divider />
         <Space wrap>
           {canCancel && <Button danger onClick={() => runConfirm("撤回订单", () => role === "admin" ? cancelAdminOrder(order.id) : cancelOrder(order.id))}>撤回订单</Button>}

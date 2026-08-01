@@ -12,6 +12,8 @@ import { ModelHallPage } from "./orders/ModelHallPage";
 import { MarketplaceOrderDetailPage } from "./orders/MarketplaceOrderDetailPage";
 import { ModelOrdersPage } from "./orders/ModelOrdersPage";
 import { OrderDetailPage } from "./orders/OrderDetailPage";
+import { MerchantOrderWorkspacePage } from "./orders/MerchantOrderWorkspacePage";
+import { ModelFulfillmentDetailPage } from "./orders/ModelFulfillmentDetailPage";
 import { WalletPage } from "./wallet/WalletPage";
 import { WithdrawalApplyPage } from "./wallet/WithdrawalApplyPage";
 import { AdminDashboardPage } from "./admin/AdminDashboardPage";
@@ -41,6 +43,8 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
   const orderId = detailMatch ? Number(detailMatch[1]) : null;
   const hallDetailMatch = role === "model" ? location.pathname.match(/^\/model\/hall\/(\d+)$/) : null;
   const hallOrderId = hallDetailMatch ? Number(hallDetailMatch[1]) : null;
+  const fulfillmentDetailMatch = role === "model" ? location.pathname.match(/^\/model\/fulfillments\/(\d+)$/) : null;
+  const fulfillmentId = fulfillmentDetailMatch ? Number(fulfillmentDetailMatch[1]) : null;
   const profileRoute = currentPage === "profile" && (role === "merchant" || role === "model");
   const merchantOrdersRoute = role === "merchant" && currentPage === "orders";
   const modelHallRoute = role === "model" && currentPage === "hall";
@@ -80,9 +84,9 @@ export function RoleWorkspace({ role }: { role: UserRole }) {
           <Button type="text" icon={<LogoutOutlined />} onClick={logout}>退出</Button>
         </Layout.Header>
         {role === "model" && <div className="talent-mobile-header"><strong>蓝鹰寄拍</strong><span>{session?.user.nickname}</span><Button type="text" icon={<LogoutOutlined />} aria-label="退出登录" onClick={logout} /></div>}
-        <Layout.Content className="workspace-content">{modelOnboardingRoute ? <TalentOnboardingPage /> : hallOrderId ? <MarketplaceOrderDetailPage orderId={hallOrderId} /> : orderId ? <OrderDetailPage role={role} orderId={orderId} /> : modelWithdrawRoute ? <WithdrawalApplyPage /> : profileRoute ? <ProfilePage role={role} /> : merchantOrdersRoute ? <MerchantOrdersPage /> : modelHallRoute ? <ModelHallPage /> : modelRankingRoute ? <TalentRankingPage /> : modelOrdersRoute ? <ModelOrdersPage /> : modelWalletRoute ? <WalletPage /> : adminOperationsRoute ? <AdminOperationsPage /> : adminApplicationsRoute ? <AdminApplicationsPage /> : adminScriptsRoute ? <AdminScriptsPage /> : adminDashboardRoute ? <AdminDashboardPage /> : adminUsersRoute ? <AdminUsersPage /> : adminOrdersRoute ? <AdminOrdersPage /> : adminDisputesRoute ? <AdminDisputesPage /> : adminWithdrawalsRoute ? <AdminWithdrawalsPage /> : <Typography.Title level={2}>{labels[role]}</Typography.Title>}</Layout.Content>
+        <Layout.Content className="workspace-content">{modelOnboardingRoute ? <TalentOnboardingPage /> : hallOrderId ? <MarketplaceOrderDetailPage orderId={hallOrderId} /> : fulfillmentId ? <ModelFulfillmentDetailPage fulfillmentId={fulfillmentId} /> : orderId ? (role === "merchant" || role === "admin" ? <MerchantOrderWorkspacePage orderId={orderId} /> : <OrderDetailPage role={role} orderId={orderId} />) : modelWithdrawRoute ? <WithdrawalApplyPage /> : profileRoute ? <ProfilePage role={role} /> : merchantOrdersRoute ? <MerchantOrdersPage /> : modelHallRoute ? <ModelHallPage /> : modelRankingRoute ? <TalentRankingPage /> : modelOrdersRoute ? <ModelOrdersPage /> : modelWalletRoute ? <WalletPage /> : adminOperationsRoute ? <AdminOperationsPage /> : adminApplicationsRoute ? <AdminApplicationsPage /> : adminScriptsRoute ? <AdminScriptsPage /> : adminDashboardRoute ? <AdminDashboardPage /> : adminUsersRoute ? <AdminUsersPage /> : adminOrdersRoute ? <AdminOrdersPage /> : adminDisputesRoute ? <AdminDisputesPage /> : adminWithdrawalsRoute ? <AdminWithdrawalsPage /> : <Typography.Title level={2}>{labels[role]}</Typography.Title>}</Layout.Content>
       </Layout>
-      {role === "model" && <nav className="talent-mobile-nav" aria-label="达人导航">{talentMobileNavigation.map((item) => <button type="button" aria-label={item.label} className={currentPage === item.key || (orderId && item.key === "orders") || (hallOrderId && item.key === "hall") || (modelWithdrawRoute && item.key === "wallet") ? "active" : ""} key={item.key} onClick={() => navigate(`/model/${item.key}`)}>{item.icon}<span>{item.label}</span></button>)}</nav>}
+      {role === "model" && <nav className="talent-mobile-nav" aria-label="达人导航">{talentMobileNavigation.map((item) => <button type="button" aria-label={item.label} className={currentPage === item.key || (orderId && item.key === "orders") || (fulfillmentId && item.key === "orders") || (hallOrderId && item.key === "hall") || (modelWithdrawRoute && item.key === "wallet") ? "active" : ""} key={item.key} onClick={() => navigate(`/model/${item.key}`)}>{item.icon}<span>{item.label}</span></button>)}</nav>}
     </Layout>
   );
 }

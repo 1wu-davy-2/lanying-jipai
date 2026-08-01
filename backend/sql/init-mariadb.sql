@@ -1982,3 +1982,73 @@ CREATE INDEX ix_media_assets_owner_id ON media_assets (owner_id);
 
 UPDATE alembic_version SET version_num='20260805_13' WHERE alembic_version.version_num = '20260804_12';
 
+-- Running upgrade 20260805_13 -> 20260806_14
+
+CREATE TABLE order_fulfillments (
+    id BIGINT NOT NULL AUTO_INCREMENT, 
+    order_id BIGINT NOT NULL, 
+    application_id BIGINT NOT NULL, 
+    model_id BIGINT NOT NULL, 
+    slot_no INTEGER, 
+    status VARCHAR(30) NOT NULL DEFAULT 'CLAIMED', 
+    product_source VARCHAR(30) NOT NULL DEFAULT 'merchant_ship', 
+    return_required BOOL NOT NULL DEFAULT true, 
+    self_keep_after_shoot BOOL NOT NULL DEFAULT false, 
+    commission_amount NUMERIC(10, 2) NOT NULL DEFAULT '0.00', 
+    product_subsidy_amount NUMERIC(10, 2) NOT NULL DEFAULT '0.00', 
+    ship_to_model_tracking_no VARCHAR(50), 
+    ship_to_model_company VARCHAR(50), 
+    return_tracking_no VARCHAR(50), 
+    return_company VARCHAR(50), 
+    submitted_at DATETIME, 
+    reviewed_at DATETIME, 
+    claimed_at DATETIME, 
+    shipped_at DATETIME, 
+    in_progress_at DATETIME, 
+    returned_at DATETIME, 
+    completed_at DATETIME, 
+    reject_reason TEXT, 
+    created_at DATETIME NOT NULL DEFAULT now(), 
+    updated_at DATETIME NOT NULL DEFAULT now(), 
+    PRIMARY KEY (id), 
+    CONSTRAINT uq_order_fulfillment_model UNIQUE (order_id, model_id), 
+    CONSTRAINT uq_order_fulfillment_slot UNIQUE (order_id, slot_no), 
+    FOREIGN KEY(order_id) REFERENCES orders (id), 
+    UNIQUE (application_id), 
+    FOREIGN KEY(application_id) REFERENCES order_applications (id), 
+    FOREIGN KEY(model_id) REFERENCES users (id)
+);
+
+CREATE INDEX ix_order_fulfillments_order_id ON order_fulfillments (order_id);
+
+CREATE INDEX ix_order_fulfillments_model_id ON order_fulfillments (model_id);
+
+CREATE INDEX ix_order_fulfillments_status ON order_fulfillments (status);
+
+CREATE INDEX ix_order_fulfillments_order_status ON order_fulfillments (order_id, status);
+
+CREATE TABLE fulfillment_submissions (
+    id BIGINT NOT NULL AUTO_INCREMENT, 
+    fulfillment_id BIGINT NOT NULL, 
+    version INTEGER NOT NULL, 
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING_REVIEW', 
+    media_urls TEXT NOT NULL DEFAULT '[]', 
+    remark TEXT, 
+    review_reason VARCHAR(255), 
+    reviewer_id BIGINT, 
+    submitted_at DATETIME, 
+    reviewed_at DATETIME, 
+    created_at DATETIME NOT NULL DEFAULT now(), 
+    updated_at DATETIME NOT NULL DEFAULT now(), 
+    PRIMARY KEY (id), 
+    CONSTRAINT uq_fulfillment_submission_version UNIQUE (fulfillment_id, version), 
+    FOREIGN KEY(fulfillment_id) REFERENCES order_fulfillments (id), 
+    FOREIGN KEY(reviewer_id) REFERENCES users (id)
+);
+
+CREATE INDEX ix_fulfillment_submissions_fulfillment_id ON fulfillment_submissions (fulfillment_id);
+
+CREATE INDEX ix_fulfillment_submissions_status ON fulfillment_submissions (status);
+
+UPDATE alembic_version SET version_num='20260806_14' WHERE alembic_version.version_num = '20260805_13';
+

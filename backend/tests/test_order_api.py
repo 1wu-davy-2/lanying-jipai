@@ -102,6 +102,10 @@ def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
     assert client.post(f"/api/orders/{order_id}/applications", headers=model_headers, json={"message": "可以按时交付"}).status_code == 201
     application = client.get("/api/admin/order-applications", headers=admin, params={"status": "PENDING"}).json()["data"]["items"][0]
     assert client.put(f"/api/admin/order-applications/{application['id']}/review", headers=admin, json={"approved": True}).status_code == 200
+    my_fulfillments = client.get("/api/orders/fulfillments/my", headers=model_headers)
+    assert my_fulfillments.status_code == 200
+    assert my_fulfillments.json()["data"]["total"] == 1
+    assert my_fulfillments.json()["data"]["items"][0]["status"] == "CLAIMED"
     assert client.put(f"/api/orders/{order_id}/ship", headers=merchant_headers, json={"tracking_no": "SF100", "company": "顺丰"}).status_code == 200
     assert client.put(f"/api/orders/{order_id}/receive", headers=model_headers).status_code == 200
     submitted_media = add_delivery_assets("13300000002")
@@ -177,6 +181,146 @@ def test_upload_rejects_unapproved_types_and_returns_a_static_url() -> None:
     assert invalid_image.status_code == 400
     assert uploaded.status_code == 201
     assert uploaded.json()["data"]["url"].startswith("/uploads/")
+
+
+def test_upload_records_an_mp4_duration() -> None:
+    client = TestClient(app)
+    headers = {"Authorization": f"Bearer {register(client, '13300000005', 'model')}"}
+
+    def box(box_type: bytes, body: bytes) -> bytes:
+        return (len(body) + 8).to_bytes(4, "big") + box_type + body
+
+    movie_header = (
+        b"\x00\x00\x00\x00"
+        + b"\x00" * 8
+        + (1_000).to_bytes(4, "big")
+        + (6_000).to_bytes(4, "big")
+    )
+    mp4 = box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2") + box(b"moov", box(b"mvhd", movie_header))
+    uploaded = client.post("/api/uploads", headers=headers, files={"file": ("delivery.mp4", mp4, "video/mp4")})
+
+    assert uploaded.status_code == 201
+    assert uploaded.json()["data"]["content_type"] == "video/mp4"
+    assert Decimal(uploaded.json()["data"]["duration_seconds"]) == Decimal("6")
+
+
+def test_multi_talent_fulfillments_reopen_slots_and_complete_the_parent_order() -> None:
+    client = TestClient(app)
+    merchant_headers = {"Authorization": f"Bearer {register(client, '13300000010', 'merchant')}"}
+    admin = admin_headers()
+    model_phones = ["13300000011", "13300000012", "13300000013"]
+    model_headers = [{"Authorization": f"Bearer {register(client, phone, 'model')}"} for phone in model_phones]
+    media_by_phone: dict[str, list[str]] = {}
+    for phone, headers in zip(model_phones, model_headers):
+        make_model_eligible(client, headers["Authorization"].removeprefix("Bearer "), phone)
+        media_by_phone[phone] = add_delivery_assets(phone)
+
+    created = client.post(
+        "/api/orders",
+        headers=merchant_headers,
+        json={
+            "title": "Multi-talent owned product order",
+            "description": "Independent fulfillment slots",
+            "product_categories": ["\u5176\u4ed6"],
+            "quantity": 2,
+            "commission_amount": "88.00",
+            "product_source": "talent_owned",
+            "return_required": False,
+            "self_keep_after_shoot": True,
+        },
+    )
+    assert created.status_code == 201
+    order_id = created.json()["data"]["id"]
+    legacy_accept = client.put(f"/api/orders/{order_id}/accept", headers=merchant_headers)
+    assert legacy_accept.status_code == 409
+    assert "多人订单" in legacy_accept.json()["message"]
+
+    for phone, headers in zip(model_phones, model_headers):
+        applied = client.post(
+            f"/api/orders/{order_id}/applications",
+            headers=headers,
+            json={"owned_product_images": [media_by_phone[phone][0]]},
+        )
+        assert applied.status_code == 201
+
+    applications = client.get(
+        "/api/admin/order-applications",
+        headers=admin,
+        params={"order_id": order_id, "status": "PENDING"},
+    ).json()["data"]["items"]
+    applications_by_model = {item["applicant"]["id"]: item["id"] for item in applications}
+    with get_session_factory()() as session:
+        model_ids = {
+            phone: session.scalar(select(User.id).where(User.phone == phone))
+            for phone in model_phones
+        }
+
+    for phone in model_phones[:2]:
+        reviewed = client.put(
+            f"/api/admin/order-applications/{applications_by_model[model_ids[phone]]}/review",
+            headers=admin,
+            json={"approved": True},
+        )
+        assert reviewed.status_code == 200
+
+    workspace = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers).json()["data"]
+    assert workspace["summary"]["approved_quantity"] == 2
+    first_fulfillment = next(item for item in workspace["fulfillments"] if item["model"]["id"] == model_ids[model_phones[0]])
+    rejected = client.put(
+        f"/api/orders/fulfillments/{first_fulfillment['id']}/owned-product-review",
+        headers=merchant_headers,
+        json={"approved": False, "reason": "Product does not match"},
+    )
+    assert rejected.status_code == 200
+
+    reopened = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers).json()["data"]
+    assert reopened["summary"]["approved_quantity"] == 1
+    assert reopened["summary"]["available_quantity"] == 1
+    assert reopened["summary"]["recruitment_status"] == "OPEN"
+    assert reopened["order"]["model_id"] == model_ids[model_phones[1]]
+
+    third_review = client.put(
+        f"/api/admin/order-applications/{applications_by_model[model_ids[model_phones[2]]]}/review",
+        headers=admin,
+        json={"approved": True},
+    )
+    assert third_review.status_code == 200
+    refilled = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers).json()["data"]
+    assert refilled["summary"]["approved_quantity"] == 2
+    assert refilled["summary"]["available_quantity"] == 0
+    active_fulfillments = [item for item in refilled["fulfillments"] if item["status"] != "CANCELLED"]
+    assert {item["slot_no"] for item in active_fulfillments} == {1, 2}
+
+    for phone, headers in zip(model_phones[1:], model_headers[1:]):
+        fulfillment = next(item for item in active_fulfillments if item["model"]["id"] == model_ids[phone])
+        approved = client.put(
+            f"/api/orders/fulfillments/{fulfillment['id']}/owned-product-review",
+            headers=merchant_headers,
+            json={"approved": True},
+        )
+        assert approved.status_code == 200
+        submission = client.post(
+            f"/api/orders/fulfillments/{fulfillment['id']}/submissions",
+            headers=headers,
+            json={"submitted_media": media_by_phone[phone]},
+        )
+        assert submission.status_code == 201
+        premature_accept = client.put(
+            f"/api/orders/fulfillments/{fulfillment['id']}/accept",
+            headers=merchant_headers,
+        )
+        assert premature_accept.status_code == 409
+        review = client.put(
+            f"/api/orders/fulfillments/{fulfillment['id']}/submissions/{submission.json()['data']['id']}/review",
+            headers=merchant_headers,
+            json={"approved": True},
+        )
+        assert review.status_code == 200
+        assert review.json()["data"]["status"] == "COMPLETED"
+
+    completed = client.get(f"/api/orders/{order_id}", headers=merchant_headers)
+    assert completed.status_code == 200
+    assert completed.json()["data"]["status"] == "COMPLETED"
 
 
 def test_order_errors_use_a_uniform_envelope() -> None:

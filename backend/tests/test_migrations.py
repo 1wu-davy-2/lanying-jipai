@@ -21,6 +21,8 @@ def test_initial_migration_creates_account_tables(tmp_path, monkeypatch) -> None
         "merchant_profiles",
         "model_profiles",
         "orders",
+        "order_fulfillments",
+        "fulfillment_submissions",
         "order_logs",
         "order_messages",
         "wallets",
@@ -33,6 +35,10 @@ def test_initial_migration_creates_account_tables(tmp_path, monkeypatch) -> None
     assert {"primary_storage", "backup_storage"} <= {
         column["name"] for column in inspect(engine).get_columns("media_backup_jobs")
     }
+    fulfillment_columns = {
+        column["name"]: column for column in inspect(engine).get_columns("order_fulfillments")
+    }
+    assert fulfillment_columns["slot_no"]["nullable"] is True
 
 
 def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:
@@ -63,11 +69,11 @@ def test_sqlite_migrations_generate_primary_keys(tmp_path, monkeypatch) -> None:
 
 def test_orm_identifiers_match_mariadb_bigint_migrations() -> None:
     from app.models.media import MediaBackupJob
-    from app.models.order import Order, OrderLog, OrderMessage
+    from app.models.order import FulfillmentSubmission, Order, OrderFulfillment, OrderLog, OrderMessage
     from app.models.user import MerchantProfile, ModelProfile, User
     from app.models.wallet import PlatformConfig, Wallet, WalletTransaction, Withdrawal
 
-    for model in (User, MerchantProfile, ModelProfile, Order, OrderLog, OrderMessage, Wallet, WalletTransaction, Withdrawal, PlatformConfig, MediaBackupJob):
+    for model in (User, MerchantProfile, ModelProfile, Order, OrderFulfillment, FulfillmentSubmission, OrderLog, OrderMessage, Wallet, WalletTransaction, Withdrawal, PlatformConfig, MediaBackupJob):
         assert model.__table__.c.id.type.compile(dialect=mysql.dialect()) == "BIGINT"
 
 

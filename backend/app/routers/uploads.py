@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 _ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "video/mp4"}
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".mp4"}
-_MAX_FILE_SIZE = 10 * 1024 * 1024
+_MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024
+_MAX_VIDEO_FILE_SIZE = 20 * 1024 * 1024
 _IMAGE_FORMATS = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
 _MP4_CONTAINER_TYPES = {b"moov", b"trak", b"mdia", b"minf", b"stbl", b"edts", b"udta", b"meta"}
 
@@ -91,9 +92,10 @@ async def upload_file(
     suffix = Path(file.filename or "").suffix.lower()
     if file.content_type not in _ALLOWED_TYPES or suffix not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="仅支持 JPG、PNG、WEBP 图片或 MP4 视频")
-    content = await file.read(_MAX_FILE_SIZE + 1)
-    if len(content) > _MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="文件不能超过 10MB")
+    max_file_size = _MAX_VIDEO_FILE_SIZE if suffix == ".mp4" else _MAX_IMAGE_FILE_SIZE
+    content = await file.read(max_file_size + 1)
+    if len(content) > max_file_size:
+        raise HTTPException(status_code=400, detail="视频不能超过 20MB" if suffix == ".mp4" else "图片不能超过 10MB")
     if not content_is_valid(content, suffix):
         raise HTTPException(status_code=400, detail="文件内容与声明类型不匹配")
     now = datetime.now()

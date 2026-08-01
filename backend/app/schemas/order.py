@@ -66,6 +66,22 @@ class SubmitOrderRequest(BaseModel):
     company: str | None = Field(default=None, max_length=50)
 
 
+class FulfillmentSubmissionRequest(BaseModel):
+    submitted_media: list[str] = Field(min_length=1)
+    remark: str | None = Field(default=None, max_length=2000)
+
+
+class FulfillmentSubmissionReviewRequest(BaseModel):
+    approved: bool
+    reason: str | None = Field(default=None, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_revision_reason(self) -> "FulfillmentSubmissionReviewRequest":
+        if not self.approved and not (self.reason or "").strip():
+            raise ValueError("Revision reason is required when rejecting a submission")
+        return self
+
+
 class RejectOrderRequest(BaseModel):
     reason: str = Field(min_length=1)
 

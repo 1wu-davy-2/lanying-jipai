@@ -2,6 +2,10 @@ import axios from "axios";
 
 import type { ApiEnvelope } from "../types";
 
+export function shouldRedirectForUnauthorizedRequest(url?: string): boolean {
+  return !/\/auth\/(?:login|register)(?:[?#]|$)/.test(url ?? "");
+}
+
 export const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
   timeout: 15_000,
@@ -23,7 +27,7 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && shouldRedirectForUnauthorizedRequest(error.config?.url)) {
       localStorage.removeItem("lanying-jipai-auth");
       if (window.location.pathname !== "/login") window.location.assign("/login");
     }

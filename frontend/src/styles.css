@@ -285,6 +285,51 @@ body { margin: 0; min-width: 320px; }
 .model-order-detail-next-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--talent-primary, #0f766e); background: var(--talent-canvas, #f3f7f6); }
 .model-order-detail-next-action span { color: var(--talent-muted, #627173); font-size: 13px; }
 .model-order-detail-next-action strong { color: var(--talent-ink, #172026); }
+.merchant-order-fulfillment-filter { margin: 0 0 14px; }
+.merchant-order-progress { display: grid; gap: 4px; min-width: 132px; }
+.merchant-order-progress strong { color: #0f766e; }
+.merchant-order-progress .ant-badge { display: block; margin-right: 8px; font-size: 12px; }
+.merchant-workspace-heading { align-items: center; }
+.merchant-workspace-heading > div { min-width: 0; flex: 1; }
+.merchant-workspace-heading h2.ant-typography { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-overview-card { margin-bottom: 18px; border: 1px solid #dce8e4; background: #fff; }
+.workspace-progress-line { display: flex; align-items: center; gap: 14px; margin: 7px 0 4px; }
+.workspace-progress-line strong { color: #0f766e; font-size: 24px; white-space: nowrap; }
+.workspace-progress-line .ant-progress { flex: 1; }
+.workspace-filter-bar { margin: 0 0 16px; }
+.fulfillment-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.fulfillment-card { border-color: #dce8e4; }
+.fulfillment-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.fulfillment-card-facts { display: flex; flex-wrap: wrap; gap: 7px 12px; margin-bottom: 13px; color: #617174; font-size: 12px; }
+.fulfillment-card-facts span::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: 0 5px 2px 0; border-radius: 50%; background: #0f766e; }
+.fulfillment-card-feedback { margin: 0 0 12px !important; padding: 8px 10px; background: #fff8e6; font-size: 12px; }
+.workspace-list-card { border-color: #dce8e4; }
+.workspace-application-message { margin-bottom: 5px; color: #334a4e; }
+.fulfillment-drawer-content { display: grid; gap: 14px; }
+.fulfillment-drawer-talent { display: grid; gap: 16px; border-color: #dce8e4; }
+.fulfillment-drawer-talent h4.ant-typography { margin: 0 0 4px; }
+.fulfillment-drawer-section { border-color: #dce8e4; }
+.fulfillment-submission-body { display: grid; gap: 8px; margin: 6px 0 0 52px; }
+.fulfillment-submission-body .ant-typography { margin: 0; }
+.admin-application-groups { display: grid; gap: 14px; }
+.admin-application-group { border-color: #dce8e4; }
+.admin-application-group .ant-card-head { border-color: #e7eeec; }
+.admin-application-group .ant-list-item { align-items: flex-start; gap: 12px; }
+.admin-application-group .ant-list-item-meta { min-width: 210px; }
+.admin-application-message { max-width: 360px; color: #40575a; font-size: 13px; }
+@media (max-width: 760px) {
+  .merchant-workspace-heading { flex-wrap: wrap; }
+  .merchant-workspace-heading > div { order: 2; flex-basis: calc(100% - 42px); }
+  .merchant-workspace-heading > .ant-tag { order: 3; margin-left: 42px; }
+  .workspace-overview-card .ant-statistic-title { font-size: 12px; }
+  .workspace-overview-card .ant-statistic-content { font-size: 20px; }
+  .fulfillment-card-grid { grid-template-columns: 1fr; }
+  .fulfillment-submission-body { margin-left: 0; }
+  .admin-application-group .ant-card-extra { display: none; }
+  .admin-application-group .ant-list-item { flex-wrap: wrap; }
+  .admin-application-group .ant-list-item-action { width: 100%; margin-left: 0; text-align: right; }
+  .admin-application-message { flex-basis: 100%; padding-left: 54px; }
+}
 
 /* Public homepage: botanical editorial language adapted to a real collaboration workflow. */
 .official-page { --official-paper: #f9f8f4; --official-ink: #2d3a31; --official-sage: #8c9a84; --official-terracotta: #c27b66; --official-clay: #dfb4a7; --official-mist: #e6e6dc; --official-shadow: 0 24px 60px rgba(45, 58, 49, .12); overflow: hidden; background-color: var(--official-paper); background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png"); color: var(--official-ink); font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif; }

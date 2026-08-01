@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
-from app.models.order import Order
+from app.models.order import FulfillmentSubmission, Order, OrderFulfillment, OrderLog
 from app.models.wallet import Wallet, WalletTransaction, Withdrawal
 from app.security import encrypt_sensitive
 from app.services.order_service import OrderConflictError, transition_order
@@ -88,6 +88,96 @@ def complete_order_and_settle(
                 if order.product_subsidy_amount == 0
                 else f"订单 {order.order_no} 佣金 ¥{order.commission_amount} + 商品补贴 ¥{order.product_subsidy_amount}"
             ),
+        )
+    )
+
+
+def complete_fulfillment_and_settle(
+    session: Session,
+    fulfillment: OrderFulfillment,
+    operator_id: int,
+    remark: str = "商家验收通过并完成达人履约结算",
+) -> None:
+    """Complete one talent fulfillment without settling sibling slots."""
+    if fulfillment.status not in {"RETURNED", "SUBMITTED", "COMPLETED"} or (
+        fulfillment.return_required and fulfillment.status not in {"RETURNED", "COMPLETED"}
+    ):
+        raise WalletConflictError("当前履约实例尚未完成返货，无法结算")
+
+    order = session.get(Order, fulfillment.order_id)
+    if order is None:
+        raise WalletConflictError("所属订单不存在，无法结算")
+
+    session.flush()
+    idempotency_key = f"fulfillment:{fulfillment.id}:settlement"
+    existing = session.scalar(select(WalletTransaction).where(WalletTransaction.idempotency_key == idempotency_key))
+    if not fulfillment.return_required and fulfillment.status == "SUBMITTED":
+        latest_submission = session.scalar(
+            select(FulfillmentSubmission)
+            .where(FulfillmentSubmission.fulfillment_id == fulfillment.id)
+            .order_by(FulfillmentSubmission.version.desc())
+        )
+        if latest_submission is None or latest_submission.status != "APPROVED":
+            raise WalletConflictError("返图尚未审核通过，无法结算")
+    if existing is not None:
+        fulfillment.status = "COMPLETED"
+        fulfillment.completed_at = fulfillment.completed_at or datetime.now(timezone.utc)
+        session.flush()
+        _complete_parent_order_when_ready(session, order, operator_id)
+        return
+
+    now = datetime.now(timezone.utc)
+    settlement_amount = fulfillment.commission_amount + fulfillment.product_subsidy_amount
+    wallet = _change_wallet(session, fulfillment.model_id, settlement_amount, Decimal("0.00"))
+    fulfillment.status = "COMPLETED"
+    fulfillment.completed_at = now
+    session.add(
+        WalletTransaction(
+            idempotency_key=idempotency_key,
+            user_id=fulfillment.model_id,
+            type=ORDER_SETTLEMENT,
+            amount=settlement_amount,
+            balance_after=wallet.available_balance,
+            frozen_balance_after=wallet.frozen_balance,
+            order_id=order.id,
+            remark=(
+                f"订单 {order.order_no} 名额 {fulfillment.slot_no} 佣金结算"
+                if fulfillment.product_subsidy_amount == 0
+                else f"订单 {order.order_no} 名额 {fulfillment.slot_no} 佣金 ¥{fulfillment.commission_amount} + 商品补贴 ¥{fulfillment.product_subsidy_amount}"
+            ),
+        )
+    )
+    session.flush()
+    _complete_parent_order_when_ready(session, order, operator_id)
+
+
+def _complete_parent_order_when_ready(session: Session, order: Order, operator_id: int) -> None:
+    active_count = session.scalar(
+        select(func.count()).select_from(OrderFulfillment).where(
+            OrderFulfillment.order_id == order.id,
+            OrderFulfillment.status != "CANCELLED",
+        )
+    ) or 0
+    completed_count = session.scalar(
+        select(func.count()).select_from(OrderFulfillment).where(
+            OrderFulfillment.order_id == order.id,
+            OrderFulfillment.status == "COMPLETED",
+        )
+    ) or 0
+    if active_count < order.quantity or completed_count < order.quantity or order.status == "COMPLETED":
+        return
+    previous_status = order.status
+    now = datetime.now(timezone.utc)
+    order.status = "COMPLETED"
+    order.completed_at = now
+    order.updated_at = now
+    session.add(
+        OrderLog(
+            order_id=order.id,
+            operator_id=operator_id,
+            from_status=previous_status,
+            to_status="COMPLETED",
+            remark="All fulfillment slots completed",
         )
     )
 

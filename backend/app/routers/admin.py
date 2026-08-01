@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import require_role
-from app.models.order import Order, OrderApplication, OrderLog
+from app.models.order import Order, OrderApplication, OrderFulfillment, OrderLog
 from app.models.script import ScriptCategory, ScriptDocument
 from app.models.user import User
 from app.models.wallet import Withdrawal
-from app.routers.orders import get_order, new_published_order, serialize_order
+from app.routers.orders import ensure_legacy_single_order, get_order, new_published_order, serialize_fulfillment, serialize_order
 from app.schemas.order import AdminOrderCreateRequest, ApplicationReviewRequest, ArbitrationRequest, RejectOrderRequest, ShipmentRequest
 from app.services.order_service import OrderConflictError, approve_order_application, transition_order
 from app.services.talent_level import talent_status
@@ -118,6 +118,7 @@ def read_script_document(
 def serialize_application(application: OrderApplication, session: Session) -> dict[str, object]:
     applicant = session.get(User, application.model_id)
     order = session.get(Order, application.order_id)
+    fulfillment = session.scalar(select(OrderFulfillment).where(OrderFulfillment.application_id == application.id))
     return {
         "id": application.id,
         "status": application.status,
@@ -126,6 +127,7 @@ def serialize_application(application: OrderApplication, session: Session) -> di
         "review_reason": application.review_reason,
         "created_at": application.created_at.isoformat() if application.created_at else None,
         "reviewed_at": application.reviewed_at.isoformat() if application.reviewed_at else None,
+        "fulfillment": serialize_fulfillment(fulfillment, session) if fulfillment else None,
         "applicant": None if applicant is None else {
             "id": applicant.id,
             "nickname": applicant.nickname,
@@ -140,6 +142,7 @@ def serialize_application(application: OrderApplication, session: Session) -> di
 @router.get("/order-applications")
 def list_order_applications(
     status_filter: str | None = Query(default=None, alias="status"),
+    order_id: int | None = Query(default=None, ge=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(require_role("admin")),
@@ -148,6 +151,8 @@ def list_order_applications(
     statement = select(OrderApplication)
     if status_filter:
         statement = statement.where(OrderApplication.status == status_filter)
+    if order_id is not None:
+        statement = statement.where(OrderApplication.order_id == order_id)
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     applications = list(session.scalars(statement.order_by(OrderApplication.created_at.asc(), OrderApplication.id.asc()).offset((page - 1) * page_size).limit(page_size)))
     return {"code": 0, "message": "ok", "data": {"items": [serialize_application(item, session) for item in applications], "total": total, "page": page, "page_size": page_size}}
@@ -281,6 +286,7 @@ def operate_for_merchant(
     remark: str,
     changes: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    ensure_legacy_single_order(order)
     try:
         transition_order(session, order, target_status, admin.id, remark, changes)
         session.commit()
@@ -316,6 +322,7 @@ def accept_order_for_merchant(
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     order = get_order(session, order_id)
+    ensure_legacy_single_order(order)
     try:
         complete_order_and_settle(session, order, admin.id, "运营代商家验收通过并完成结算")
         session.commit()
@@ -354,6 +361,7 @@ def arbitrate_order(
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     order = get_order(session, order_id)
+    ensure_legacy_single_order(order)
     try:
         if payload.winner == "model":
             complete_order_and_settle(session, order, admin.id, f"管理员仲裁判达人：{payload.remark}")
