@@ -1,2 +1,3 @@
 backend/sql/init-mariadb.sql whitespace=-trailing-space
 deploy/*.sh text eol=lf
+backend/docker-entrypoint.sh text eol=lf
