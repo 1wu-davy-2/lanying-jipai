@@ -51,7 +51,7 @@ export function LoginPage({ portal }: { portal?: PortalRole }) {
           </Form.Item>
           <Button type="primary" htmlType="submit" size="large" block loading={submitting}>登录</Button>
         </Form>
-        <p className="auth-switch">{portal === "model" ? <>还没有达人账号？<Link to="/talent/register">达人注册</Link></> : portal === "admin" ? <Link to="/">切换入口</Link> : <>还没有账号？<Link to="/talent/register">达人注册</Link></>}</p>
+        <p className="auth-switch">{portal === "model" ? <>还没有达人账号？<Link to="/talent/register">达人注册</Link></> : portal === "admin" ? <Link to="/entry">切换入口</Link> : <>还没有账号？<Link to="/talent/register">达人注册</Link></>}</p>
       </div>
     </AuthFrame>
   );
