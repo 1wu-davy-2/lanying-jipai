@@ -32,6 +32,7 @@ export function AdminUsersPage() {
   return <div><div className="page-heading"><Typography.Title level={2}>用户管理</Typography.Title></div>
     <Space wrap className="filter-bar"><Select allowClear placeholder="角色" options={Object.entries(roleLabels).map(([value, label]) => ({ value, label }))} onChange={(role) => setFilters((old) => ({ ...old, role }))} /><Select allowClear placeholder="账号状态" options={[{ value: "active", label: "正常" }, { value: "disabled", label: "已禁用" }]} onChange={(status) => setFilters((old) => ({ ...old, status }))} /><Select allowClear placeholder="认证状态" options={Object.entries(verifyLabels).map(([value, item]) => ({ value, label: item.label }))} onChange={(verify_status) => setFilters((old) => ({ ...old, verify_status }))} /><Input.Search allowClear placeholder="手机号或昵称" onSearch={(keyword) => setFilters((old) => ({ ...old, keyword }))} /></Space>
     <Table rowKey="id" loading={isLoading} dataSource={data?.items ?? []} pagination={false} columns={[
+      { title: "来源", dataIndex: "registration_channel", render: (value) => value || "未填写" },
       { title: "用户", render: (_, user: AdminUser) => <div><strong>{user.nickname}</strong><div className="muted-text">{user.phone}</div></div> },
       { title: "角色", dataIndex: "role", render: (value) => roleLabels[value] ?? value },
       { title: "账号", dataIndex: "status", render: (value) => <Tag color={value === "active" ? "green" : "red"}>{value === "active" ? "正常" : "已禁用"}</Tag> },

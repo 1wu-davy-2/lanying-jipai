@@ -96,6 +96,15 @@ describe("talent marketplace", () => {
     expect(within(orderCard).getByRole("button", { name: "查看详情并申请" })).toBeVisible();
   });
 
+  it("requests the selected hall page and exposes pagination for more than one page", async () => {
+    mocks.getOrderHall.mockResolvedValueOnce({ items: [sampleOrder], total: 21, page: 1, page_size: 20 });
+    renderPage(<ModelHallPage />);
+
+    expect(await screen.findByRole("list")).toBeVisible();
+    expect(mocks.getOrderHall).toHaveBeenCalledWith(undefined, 1, 20);
+    expect(screen.getByTitle("Next Page")).toBeVisible();
+  });
+
   it("groups an order detail into reward, work, completion, and platform rules", async () => {
     renderPage(<MarketplaceOrderDetailPage orderId={8} />);
 

@@ -1,14 +1,16 @@
 import { client, request } from "./client";
-import type { ApplicationStatus, OrderItem } from "./orders";
+import type { ApplicationStatus, OrderApplication, OrderFulfillment, OrderItem, TalentSnapshot } from "./orders";
 import type { Withdrawal } from "./wallets";
 
 export interface Page<T> { items: T[]; total: number; page: number; page_size: number; }
+export interface PageParams { page?: number; page_size?: number; }
 
 export interface AdminUser {
   id: number;
   phone: string;
   role: "merchant" | "model" | "admin";
   nickname: string;
+  registration_channel?: string | null;
   status: "active" | "disabled";
   real_name: string | null;
   id_card_no: string | null;
@@ -67,6 +69,12 @@ export interface AdminOrderApplication {
   order: OrderItem | null;
 }
 
+export interface AdminFulfillmentDispute extends OrderFulfillment {
+  order: OrderItem | null;
+  model: TalentSnapshot | null;
+  application: OrderApplication | null;
+}
+
 export function getDashboard() { return request<DashboardSummary>(client.get("/admin/dashboard/summary")); }
 export function getAdminScriptCategories() { return request<ScriptCategory[]>(client.get("/admin/scripts/categories")); }
 export function getAdminScripts(params: { category?: string; keyword?: string; page?: number; page_size?: number } = {}) { return request<Page<ScriptDocumentSummary>>(client.get("/admin/scripts", { params })); }
@@ -78,14 +86,18 @@ export function reviewVerification(userId: number, approved: boolean, reason?: s
 export function updateMerchantAssurance(userId: number, values: { quality_merchant: boolean; guarantee_deposit_paid: boolean; guarantee_deposit_amount: string }) { return request<AdminUser>(client.put(`/admin/users/${userId}/merchant-assurance`, values)); }
 export function getAdminOrders(params: Record<string, string | number | boolean | undefined> = {}) { return request<Page<OrderItem>>(client.get("/admin/orders", { params })); }
 export function createAdminOrder(values: Record<string, unknown>) { return request<OrderItem>(client.post("/admin/orders", values)); }
-export function getAdminOrderApplications(status?: ApplicationStatus) { return request<Page<AdminOrderApplication>>(client.get("/admin/order-applications", { params: status ? { status } : undefined })); }
+export function getAdminOrderApplications(status?: ApplicationStatus, params: PageParams = {}) {
+  return request<Page<AdminOrderApplication>>(client.get("/admin/order-applications", { params: { ...params, ...(status ? { status } : {}) } }));
+}
 export function reviewOrderApplication(applicationId: number, values: { approved: boolean; reason?: string }) { return request<AdminOrderApplication>(client.put(`/admin/order-applications/${applicationId}/review`, values)); }
 export function shipAdminOrder(orderId: number, values: { tracking_no: string; company: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/ship`, values)); }
 export function acceptAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/accept`)); }
 export function rejectAdminOrder(orderId: number, reason: string) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/reject`, { reason })); }
 export function cancelAdminOrder(orderId: number) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/cancel`)); }
-export function getDisputedOrders() { return request<Page<OrderItem>>(client.get("/admin/orders/disputed")); }
+export function getDisputedOrders(params: PageParams = {}) { return request<Page<OrderItem>>(client.get("/admin/orders/disputed", { params })); }
 export function arbitrateOrder(orderId: number, values: { winner: "model" | "merchant"; remark: string }) { return request<OrderItem>(client.put(`/admin/orders/${orderId}/arbitrate`, values)); }
+export function getFulfillmentDisputes(params: PageParams = {}) { return request<Page<AdminFulfillmentDispute>>(client.get("/admin/fulfillment-disputes", { params })); }
+export function arbitrateFulfillment(fulfillmentId: number, values: { winner: "model" | "merchant"; remark: string }) { return request<AdminFulfillmentDispute>(client.put(`/admin/fulfillments/${fulfillmentId}/arbitrate`, values)); }
 export function getAdminWithdrawals(status_filter?: string) { return request<Page<Withdrawal>>(client.get("/admin/withdrawals", { params: status_filter ? { status_filter } : undefined })); }
 export function approveWithdrawal(withdrawalId: number) { return request<Withdrawal>(client.put(`/admin/withdrawals/${withdrawalId}/approve`)); }
 export function rejectWithdrawal(withdrawalId: number, reason: string) { return request<Withdrawal>(client.put(`/admin/withdrawals/${withdrawalId}/reject`, { reason })); }

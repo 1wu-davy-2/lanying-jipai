@@ -66,6 +66,14 @@ class OrderMessage(Base):
 
     id: Mapped[int] = mapped_column(ID_TYPE, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(ID_TYPE, ForeignKey("orders.id"), index=True, nullable=False)
+    # Legacy parent-order messages keep this field NULL.  New multi-talent
+    # conversations are isolated to one fulfillment instance.
+    fulfillment_id: Mapped[Optional[int]] = mapped_column(
+        ID_TYPE,
+        ForeignKey("order_fulfillments.id"),
+        index=True,
+        nullable=True,
+    )
     sender_id: Mapped[int] = mapped_column(ID_TYPE, ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

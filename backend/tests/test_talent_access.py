@@ -5,9 +5,10 @@ from sqlalchemy import select
 
 from app.database import get_session_factory
 from app.main import app
-from app.models.order import Order
+from app.models.order import Order, OrderApplication, OrderFulfillment
 from app.models.user import User
 from app.security import create_access_token, hash_password
+from app.services.talent_level import talent_status
 
 
 def register(client: TestClient, phone: str, role: str) -> str:
@@ -130,3 +131,132 @@ def test_model_ranking_distinguishes_simulated_and_real_data() -> None:
     assert response.json()["data"]["simulated"][0]["is_simulated"] is True
     assert response.json()["data"]["real"][0]["nickname"] == "真实达人"
     assert response.json()["data"]["real"][0]["is_simulated"] is False
+
+
+def test_talent_status_counts_multi_talent_fulfillments_without_parent_duplicates() -> None:
+    with get_session_factory()() as session:
+        merchant = User(phone="13400000004", password_hash="hash", role="merchant", nickname="merchant")
+        model = User(phone="13400000005", password_hash="hash", role="model", nickname="model")
+        session.add_all([merchant, model])
+        session.flush()
+        order = Order(
+            order_no="JP20260802000001",
+            merchant_id=merchant.id,
+            title="multi-talent order",
+            description="fulfillment status counting",
+            commission_amount=Decimal("88.00"),
+            quantity=2,
+            status="CLAIMED",
+            model_id=model.id,
+        )
+        session.add(order)
+        session.flush()
+        completed_application = OrderApplication(order_id=order.id, model_id=model.id, status="APPROVED")
+        session.add(completed_application)
+        session.flush()
+        # The parent projection points at the first talent, while both slots
+        # are represented independently by fulfillment rows in a real order.
+        completed = OrderFulfillment(
+            order_id=order.id,
+            application_id=completed_application.id,
+            model_id=model.id,
+            slot_no=1,
+            status="COMPLETED",
+            commission_amount=Decimal("88.00"),
+            product_subsidy_amount=Decimal("0.00"),
+        )
+        session.add(completed)
+        session.flush()
+        # Use a second order/application for the active slot because an
+        # application can only own one fulfillment under a parent order.
+        active_order = Order(
+            order_no="JP20260802000002",
+            merchant_id=merchant.id,
+            title="active fulfillment order",
+            description="fulfillment status counting",
+            commission_amount=Decimal("88.00"),
+            quantity=1,
+            status="PUBLISHED",
+        )
+        session.add(active_order)
+        session.flush()
+        active_application = OrderApplication(order_id=active_order.id, model_id=model.id, status="APPROVED")
+        session.add(active_application)
+        session.flush()
+        session.add(
+            OrderFulfillment(
+                order_id=active_order.id,
+                application_id=active_application.id,
+                model_id=model.id,
+                slot_no=1,
+                status="OWNED_PRODUCT_REVIEW",
+                commission_amount=Decimal("88.00"),
+                product_subsidy_amount=Decimal("0.00"),
+            )
+        )
+        session.commit()
+        persisted_model = session.get(User, model.id)
+        assert persisted_model is not None
+        status = talent_status(session, persisted_model)
+
+    assert status["completed_orders"] == 1
+    assert status["active_orders"] == 1
+
+
+def test_model_ranking_counts_each_completed_fulfillment() -> None:
+    client = TestClient(app)
+    token = register(client, "13400000006", "model")
+    headers = {"Authorization": f"Bearer {token}"}
+    with get_session_factory()() as session:
+        merchant = User(phone="13400000007", password_hash="hash", role="merchant", nickname="merchant")
+        first = session.scalar(select(User).where(User.phone == "13400000006"))
+        second = User(phone="13400000008", password_hash="hash", role="model", nickname="second")
+        assert first is not None
+        first.nickname = "first"
+        first.verify_status = "verified"
+        second.verify_status = "verified"
+        session.add_all([merchant, second])
+        session.flush()
+        order = Order(
+            order_no="JP20260802000003",
+            merchant_id=merchant.id,
+            model_id=first.id,
+            title="ranking multi-talent order",
+            description="ranking fulfillment count",
+            commission_amount=Decimal("100.00"),
+            quantity=2,
+            status="COMPLETED",
+        )
+        session.add(order)
+        session.flush()
+        first_app = OrderApplication(order_id=order.id, model_id=first.id, status="APPROVED")
+        second_app = OrderApplication(order_id=order.id, model_id=second.id, status="APPROVED")
+        session.add_all([first_app, second_app])
+        session.flush()
+        session.add_all(
+            [
+                OrderFulfillment(
+                    order_id=order.id,
+                    application_id=first_app.id,
+                    model_id=first.id,
+                    slot_no=1,
+                    status="COMPLETED",
+                    commission_amount=Decimal("100.00"),
+                ),
+                OrderFulfillment(
+                    order_id=order.id,
+                    application_id=second_app.id,
+                    model_id=second.id,
+                    slot_no=2,
+                    status="COMPLETED",
+                    commission_amount=Decimal("100.00"),
+                ),
+            ]
+        )
+        session.commit()
+
+    response = client.get("/api/users/model-ranking", headers=headers)
+    assert response.status_code == 200
+    real = {item["nickname"]: item for item in response.json()["data"]["real"]}
+    assert real["first"]["completed_orders"] == 1
+    assert real["second"]["completed_orders"] == 1

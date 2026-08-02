@@ -175,6 +175,17 @@ def approve_order_application(session: Session, application: OrderApplication, r
         fulfillment.commission_amount = order.commission_amount
         fulfillment.product_subsidy_amount = order.product_subsidy_amount
         fulfillment.claimed_at = now
+        # A cancelled slot may be reused when the same talent reapplies.
+        # Clear transition data from the previous assignment so the workspace
+        # does not display stale logistics or completion timestamps.
+        fulfillment.ship_to_model_tracking_no = None
+        fulfillment.ship_to_model_company = None
+        fulfillment.return_tracking_no = None
+        fulfillment.return_company = None
+        fulfillment.submitted_at = None
+        fulfillment.reviewed_at = None
+        fulfillment.returned_at = None
+        fulfillment.completed_at = None
         fulfillment.in_progress_at = now if assigned_status == "IN_PROGRESS" else None
         fulfillment.reject_reason = None
         result = session.execute(

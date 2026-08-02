@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.order import Order
+from app.models.order import Order, OrderFulfillment
 from app.models.user import User
 
 
@@ -28,7 +28,20 @@ TALENT_LEVELS = (
     TalentLevel("L5", "星耀达人", 120, 8, Decimal("8000")),
 )
 
-ACTIVE_ORDER_STATUSES = ("CLAIMED", "SHIPPED_TO_MODEL", "IN_PROGRESS", "RETURNED")
+# A talent has an active slot from allocation until completion/cancellation.
+# Keep this list explicit so review, revision, return, and dispute states all
+# continue to count against the concurrent-order limit.
+ACTIVE_ORDER_STATUSES = (
+    "CLAIMED",
+    "OWNED_PRODUCT_REVIEW",
+    "SHIPPED_TO_MODEL",
+    "IN_PROGRESS",
+    "SUBMITTED",
+    "REVISION_REQUIRED",
+    "WAITING_RETURN",
+    "RETURNED",
+    "DISPUTED",
+)
 
 
 def parse_portfolio_urls(value: str | None) -> list[str]:
@@ -42,17 +55,51 @@ def parse_portfolio_urls(value: str | None) -> list[str]:
 
 
 def completed_order_count(session: Session, user_id: int) -> int:
-    return session.scalar(
-        select(func.count()).select_from(Order).where(Order.model_id == user_id, Order.status == "COMPLETED")
+    fulfillment_count = session.scalar(
+        select(func.count())
+        .select_from(OrderFulfillment)
+        .join(Order, Order.id == OrderFulfillment.order_id)
+        .where(OrderFulfillment.model_id == user_id, OrderFulfillment.status == "COMPLETED")
     ) or 0
+    # Orders created before fulfillment migration may not have a child row.
+    # Count only those legacy parents to avoid double-counting backfilled data.
+    legacy_count = session.scalar(
+        select(func.count())
+        .select_from(Order)
+        .where(
+            Order.model_id == user_id,
+            Order.status == "COMPLETED",
+            ~select(OrderFulfillment.id)
+            .where(OrderFulfillment.order_id == Order.id)
+            .exists(),
+        )
+    ) or 0
+    return fulfillment_count + legacy_count
 
 
 def active_order_count(session: Session, user_id: int) -> int:
-    return session.scalar(
+    fulfillment_count = session.scalar(
+        select(func.count())
+        .select_from(OrderFulfillment)
+        .join(Order, Order.id == OrderFulfillment.order_id)
+        .where(
+            OrderFulfillment.model_id == user_id,
+            OrderFulfillment.status.in_(ACTIVE_ORDER_STATUSES),
+            Order.status.not_in(("COMPLETED", "CANCELLED")),
+        )
+    ) or 0
+    legacy_count = session.scalar(
         select(func.count())
         .select_from(Order)
-        .where(Order.model_id == user_id, Order.status.in_(ACTIVE_ORDER_STATUSES))
+        .where(
+            Order.model_id == user_id,
+            Order.status.in_(ACTIVE_ORDER_STATUSES),
+            ~select(OrderFulfillment.id)
+            .where(OrderFulfillment.order_id == Order.id)
+            .exists(),
+        )
     ) or 0
+    return fulfillment_count + legacy_count
 
 
 def talent_level_for_completed_orders(completed_orders: int) -> TalentLevel:

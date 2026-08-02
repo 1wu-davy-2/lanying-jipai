@@ -27,6 +27,11 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
   const { data: talentStatus } = useQuery({ queryKey: ["talent-status"], queryFn: getTalentStatus });
 
   const submit = async () => {
+    if (submitting) return;
+    if (order?.product_source === "talent_owned" && ownedProductImages.length === 0) {
+      message.warning("已有同款订单必须先上传至少一张同款实拍图");
+      return;
+    }
     setSubmitting(true);
     try {
       await applyForOrder(orderId, applicationMessage, ownedProductImages);

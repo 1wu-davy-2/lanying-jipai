@@ -6,6 +6,7 @@ export interface UserProfile {
   phone: string;
   role: UserRole;
   nickname: string;
+  registration_channel?: string | null;
   avatar_url?: string | null;
   verify_status: string;
   verify_reject_reason?: string | null;

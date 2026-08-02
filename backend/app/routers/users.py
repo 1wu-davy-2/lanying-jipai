@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_role
-from app.models.order import Order
+from app.models.order import Order, OrderFulfillment
 from app.models.user import MerchantProfile, ModelProfile, User
 from app.schemas.user import (
     AdminMerchantCreateRequest,
@@ -32,6 +32,7 @@ def serialize_user(user: User, include_payment_details: bool = True) -> dict[str
         "phone": user.phone,
         "role": user.role,
         "nickname": user.nickname,
+        "registration_channel": user.registration_channel,
         "avatar_url": user.avatar_url,
         "status": user.status,
         "real_name": user.real_name,
@@ -84,9 +85,42 @@ def read_talent_status(
 def model_ranking(
     _: User = Depends(require_role("model")), session: Session = Depends(get_db)
 ) -> dict[str, object]:
-    completed = func.coalesce(func.sum(case((Order.status == "COMPLETED", 1), else_=0)), 0).label("completed_orders")
-    earnings = func.coalesce(func.sum(case((Order.status == "COMPLETED", Order.commission_amount), else_=0)), Decimal("0")).label("earnings")
-    stats = select(Order.model_id.label("model_id"), completed, earnings).group_by(Order.model_id).subquery()
+    # Multi-talent orders settle per fulfillment.  Keep legacy parent-order
+    # rows only when no fulfillment exists, so migrated history is not counted
+    # twice while every assigned talent receives its own completed count.
+    fulfillment_stats = (
+        select(
+            OrderFulfillment.model_id.label("model_id"),
+            func.count(OrderFulfillment.id).label("completed_orders"),
+            func.coalesce(func.sum(OrderFulfillment.commission_amount), Decimal("0")).label("earnings"),
+        )
+        .join(Order, Order.id == OrderFulfillment.order_id)
+        .where(OrderFulfillment.status == "COMPLETED")
+        .group_by(OrderFulfillment.model_id)
+    )
+    legacy_stats = (
+        select(
+            Order.model_id.label("model_id"),
+            func.count(Order.id).label("completed_orders"),
+            func.coalesce(func.sum(Order.commission_amount), Decimal("0")).label("earnings"),
+        )
+        .where(
+            Order.status == "COMPLETED",
+            Order.model_id.is_not(None),
+            ~select(OrderFulfillment.id).where(OrderFulfillment.order_id == Order.id).exists(),
+        )
+        .group_by(Order.model_id)
+    )
+    stats_union = fulfillment_stats.union_all(legacy_stats).subquery()
+    stats = (
+        select(
+            stats_union.c.model_id,
+            func.sum(stats_union.c.completed_orders).label("completed_orders"),
+            func.sum(stats_union.c.earnings).label("earnings"),
+        )
+        .group_by(stats_union.c.model_id)
+        .subquery()
+    )
     rows = session.execute(
         select(User, func.coalesce(stats.c.completed_orders, 0), func.coalesce(stats.c.earnings, Decimal("0")))
         .outerjoin(stats, stats.c.model_id == User.id)

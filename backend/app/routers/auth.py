@@ -41,6 +41,7 @@ def register(payload: RegisterRequest, session: Session = Depends(get_db)) -> di
         password_hash=hash_password(payload.password),
         role=payload.role,
         nickname=payload.nickname or payload.phone[-4:],
+        registration_channel=payload.registration_channel.strip() if payload.registration_channel else None,
     )
     if payload.role == "merchant":
         user.merchant_profile = MerchantProfile(contact_phone=payload.phone)

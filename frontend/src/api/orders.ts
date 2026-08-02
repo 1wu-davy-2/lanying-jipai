@@ -176,7 +176,15 @@ interface OrderList<T = OrderItem> { items: T[]; total: number; page?: number; p
 export function getMyOrders(status?: OrderStatus, page = 1, pageSize = 20) {
   return request<OrderList>(client.get("/orders", { params: { status_filter: status, page, page_size: pageSize } }));
 }
-export function getOrderHall(category?: string) { return request<OrderList<MarketplaceOrder>>(client.get("/orders/hall", { params: category ? { category } : undefined })); }
+export function getOrderHall(category?: string, page = 1, pageSize = 20) {
+  return request<OrderList<MarketplaceOrder>>(client.get("/orders/hall", {
+    params: {
+      ...(category ? { category } : {}),
+      page,
+      page_size: pageSize,
+    },
+  }));
+}
 export function getHallOrder(orderId: number) { return request<MarketplaceOrder>(client.get(`/orders/hall/${orderId}`)); }
 export function getOrder(orderId: number) { return request<OrderDetail>(client.get(`/orders/${orderId}`)); }
 export function getOrderWorkspace(orderId: number) { return request<OrderWorkspace>(client.get(`/orders/${orderId}/workspace`)); }
@@ -206,6 +214,16 @@ export function disputeFulfillment(fulfillmentId: number, reason: string) { retu
 export interface OrderMessage { id: number; sender_id: number; content: string; created_at: string | null; }
 export function getMessages(orderId: number) { return request<{ items: OrderMessage[]; total: number }>(client.get(`/orders/${orderId}/messages`)); }
 export function postMessage(orderId: number, content: string) { return request<OrderMessage>(client.post(`/orders/${orderId}/messages`, { content })); }
+
+export interface FulfillmentMessage extends OrderMessage {
+  fulfillment_id?: number;
+}
+export function getFulfillmentMessages(fulfillmentId: number) {
+  return request<{ items: FulfillmentMessage[]; total: number }>(client.get(`/orders/fulfillments/${fulfillmentId}/messages`));
+}
+export function postFulfillmentMessage(fulfillmentId: number, content: string) {
+  return request<FulfillmentMessage>(client.post(`/orders/fulfillments/${fulfillmentId}/messages`, { content }));
+}
 
 export function uploadFile(file: File) {
   const form = new FormData();

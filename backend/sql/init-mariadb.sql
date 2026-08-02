@@ -2052,3 +2052,19 @@ CREATE INDEX ix_fulfillment_submissions_status ON fulfillment_submissions (statu
 
 UPDATE alembic_version SET version_num='20260806_14' WHERE alembic_version.version_num = '20260805_13';
 
+-- Running upgrade 20260806_14 -> 20260807_15
+
+ALTER TABLE order_messages ADD COLUMN fulfillment_id BIGINT;
+
+ALTER TABLE order_messages ADD CONSTRAINT fk_order_messages_fulfillment_id FOREIGN KEY(fulfillment_id) REFERENCES order_fulfillments (id);
+
+CREATE INDEX ix_order_messages_fulfillment_id ON order_messages (fulfillment_id);
+
+UPDATE alembic_version SET version_num='20260807_15' WHERE alembic_version.version_num = '20260806_14';
+
+-- Running upgrade 20260807_15 -> 20260808_16
+
+ALTER TABLE users ADD COLUMN registration_channel VARCHAR(50);
+
+UPDATE alembic_version SET version_num='20260808_16' WHERE alembic_version.version_num = '20260807_15';
+

@@ -3,12 +3,14 @@ from io import BytesIO
 
 from fastapi.testclient import TestClient
 from PIL import Image
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.main import app
 from app.database import get_session_factory
 from app.models.media import MediaAsset
+from app.models.order import OrderFulfillment
 from app.models.user import User
+from app.models.wallet import WalletTransaction
 from app.security import create_access_token, hash_password
 
 
@@ -72,6 +74,84 @@ def add_short_video_asset(phone: str) -> str:
         session.add(MediaAsset(owner_id=model.id, url=url, content_type="video/mp4", duration_seconds=Decimal("5.000")))
         session.commit()
     return url
+
+
+def create_multi_fulfillments_for_dispute_test(
+    product_source: str = "talent_owned",
+    return_required: bool = False,
+) -> tuple[
+    TestClient,
+    dict[str, str],
+    dict[str, str],
+    dict[str, str],
+    int,
+    list[int],
+    list[int],
+]:
+    client = TestClient(app)
+    merchant_headers = {"Authorization": f"Bearer {register(client, '13300000020', 'merchant')}"}
+    admin = admin_headers()
+    model_phones = ["13300000021", "13300000022"]
+    model_headers = [{"Authorization": f"Bearer {register(client, phone, 'model')}"} for phone in model_phones]
+    portfolio_by_phone: dict[str, list[str]] = {}
+    for phone, headers in zip(model_phones, model_headers):
+        make_model_eligible(client, headers["Authorization"].removeprefix("Bearer "), phone)
+        portfolio_by_phone[phone] = add_delivery_assets(phone)
+
+    created = client.post(
+        "/api/orders",
+        headers=merchant_headers,
+        json={
+            "title": "Dispute workflow order",
+            "description": "Independent dispute slots",
+            "product_categories": ["\u5176\u4ed6"],
+            "quantity": 2,
+            "commission_amount": "88.00",
+            "product_source": product_source,
+            "return_required": return_required,
+            "self_keep_after_shoot": not return_required,
+        },
+    )
+    assert created.status_code == 201
+    order_id = created.json()["data"]["id"]
+    for phone, headers in zip(model_phones, model_headers):
+        assert client.post(
+            f"/api/orders/{order_id}/applications",
+            headers=headers,
+            json={
+                "message": "Please consider my application",
+                "owned_product_images": portfolio_by_phone[phone][:1] if product_source == "talent_owned" else [],
+            },
+        ).status_code == 201
+
+    applications = client.get(
+        "/api/admin/order-applications",
+        headers=admin,
+        params={"order_id": order_id, "status": "PENDING"},
+    ).json()["data"]["items"]
+    assert applications[0]["order"]["approved_quantity"] == 0
+    assert applications[0]["order"]["available_quantity"] == 2
+    assert applications[0]["order"]["recruitment_status"] == "OPEN"
+    applications_by_model = {item["applicant"]["id"]: item["id"] for item in applications}
+    with get_session_factory()() as session:
+        model_ids = [
+            session.scalar(select(User.id).where(User.phone == phone))
+            for phone in model_phones
+        ]
+    for model_id in model_ids:
+        assert model_id is not None
+        reviewed = client.put(
+            f"/api/admin/order-applications/{applications_by_model[model_id]}/review",
+            headers=admin,
+            json={"approved": True},
+        )
+        assert reviewed.status_code == 200
+
+    workspace = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers)
+    assert workspace.status_code == 200
+    fulfillments = workspace.json()["data"]["fulfillments"]
+    fulfillment_ids = [item["id"] for item in sorted(fulfillments, key=lambda item: item["slot_no"] or 0)]
+    return client, merchant_headers, model_headers[0], admin, order_id, model_ids, fulfillment_ids
 
 
 def test_merchant_and_model_can_complete_order_delivery_flow() -> None:
@@ -310,17 +390,228 @@ def test_multi_talent_fulfillments_reopen_slots_and_complete_the_parent_order() 
             headers=merchant_headers,
         )
         assert premature_accept.status_code == 409
+        if phone == model_phones[1]:
+            revision = client.put(
+                f"/api/orders/fulfillments/{fulfillment['id']}/submissions/{submission.json()['data']['id']}/review",
+                headers=merchant_headers,
+                json={"approved": False, "reason": "Please adjust the framing"},
+            )
+            assert revision.status_code == 200
+            assert revision.json()["data"]["status"] == "REVISION_REQUIRED"
+            resubmitted = client.post(
+                f"/api/orders/fulfillments/{fulfillment['id']}/submissions",
+                headers=headers,
+                json={"submitted_media": media_by_phone[phone]},
+            )
+            assert resubmitted.status_code == 201
+            assert resubmitted.json()["data"]["version"] == submission.json()["data"]["version"] + 1
+            submission = resubmitted
         review = client.put(
             f"/api/orders/fulfillments/{fulfillment['id']}/submissions/{submission.json()['data']['id']}/review",
             headers=merchant_headers,
             json={"approved": True},
         )
-        assert review.status_code == 200
+        assert review.status_code == 200, review.json()
         assert review.json()["data"]["status"] == "COMPLETED"
 
     completed = client.get(f"/api/orders/{order_id}", headers=merchant_headers)
     assert completed.status_code == 200
     assert completed.json()["data"]["status"] == "COMPLETED"
+
+
+def test_fulfillment_messages_are_isolated_and_authorized() -> None:
+    client, merchant_headers, first_model_headers, admin, order_id, model_ids, fulfillment_ids = create_multi_fulfillments_for_dispute_test()
+    second_model_headers = {"Authorization": f"Bearer {register(client, '13300000023', 'model')}"}
+    first_id, second_id = fulfillment_ids
+
+    created = client.post(
+        f"/api/orders/fulfillments/{first_id}/messages",
+        headers=first_model_headers,
+        json={"content": "Only slot one can see this"},
+    )
+    assert created.status_code == 201
+    assert created.json()["data"]["fulfillment_id"] == first_id
+    assert client.get(f"/api/orders/fulfillments/{first_id}/messages", headers=merchant_headers).json()["data"]["total"] == 1
+    assert client.get(f"/api/orders/fulfillments/{first_id}/messages", headers=admin).json()["data"]["total"] == 1
+
+    forbidden = client.get(f"/api/orders/fulfillments/{first_id}/messages", headers=second_model_headers)
+    assert forbidden.status_code == 403
+    isolated = client.get(f"/api/orders/fulfillments/{second_id}/messages", headers=merchant_headers)
+    assert isolated.status_code == 200
+    assert isolated.json()["data"]["total"] == 0
+
+    legacy = client.post(f"/api/orders/{order_id}/messages", headers=merchant_headers, json={"content": "Parent thread"})
+    assert legacy.status_code == 201
+    assert client.get(f"/api/orders/{order_id}/messages", headers=first_model_headers).json()["data"]["total"] == 1
+
+
+def test_admin_can_arbitrate_fulfillment_for_model_idempotently() -> None:
+    client, merchant_headers, first_model_headers, admin, order_id, _, fulfillment_ids = create_multi_fulfillments_for_dispute_test(
+        product_source="merchant_ship",
+        return_required=True,
+    )
+    fulfillment_id = fulfillment_ids[0]
+    # Assignment and same-product review are not dispute stages.  The
+    # fulfillment must reach a submission review stage before either party can open
+    # arbitration.
+    blocked = client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/dispute",
+        headers=merchant_headers,
+        json={"reason": "Review slot one"},
+    )
+    assert blocked.status_code == 409
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/ship",
+        headers=merchant_headers,
+        json={"tracking_no": "SF-DISPUTE-1", "company": "顺丰"},
+    ).status_code == 200
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/receive",
+        headers=first_model_headers,
+    ).status_code == 200
+    submitted = client.post(
+        f"/api/orders/fulfillments/{fulfillment_id}/submissions",
+        headers=first_model_headers,
+        json={"submitted_media": [f"/uploads/13300000021-delivery-{index}.jpg" for index in range(6)] + ["/uploads/13300000021-delivery.mp4"]},
+    )
+    assert submitted.status_code == 201
+    early_review = client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/submissions/{submitted.json()['data']['id']}/review",
+        headers=merchant_headers,
+        json={"approved": True},
+    )
+    assert early_review.status_code == 200
+    assert early_review.json()["data"]["status"] == "WAITING_RETURN"
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/dispute",
+        headers=merchant_headers,
+        json={"reason": "Review is required before arbitration"},
+    ).status_code == 200
+    blocked_review = client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/submissions/{submitted.json()['data']['id']}/review",
+        headers=merchant_headers,
+        json={"approved": True},
+    )
+    assert blocked_review.status_code == 409
+    listed = client.get("/api/admin/fulfillment-disputes", headers=admin)
+    assert listed.status_code == 200
+    assert listed.json()["data"]["total"] == 1
+    assert listed.json()["data"]["items"][0]["id"] == fulfillment_id
+
+    first = client.put(
+        f"/api/admin/fulfillments/{fulfillment_id}/arbitrate",
+        headers=admin,
+        json={"winner": "model", "remark": "Evidence supports talent"},
+    )
+    assert first.status_code == 200
+    assert first.json()["data"]["status"] == "COMPLETED"
+    second = client.put(
+        f"/api/admin/fulfillments/{fulfillment_id}/arbitrate",
+        headers=admin,
+        json={"winner": "model", "remark": "Repeat decision"},
+    )
+    assert second.status_code == 200
+    with get_session_factory()() as session:
+        settlement_count = session.scalar(
+            select(func.count()).select_from(WalletTransaction).where(
+                WalletTransaction.idempotency_key == f"fulfillment:{fulfillment_id}:settlement"
+            )
+        )
+    assert settlement_count == 1
+    parent_status = client.get(f"/api/orders/{order_id}", headers=first_model_headers).json()["data"]["status"]
+    assert parent_status != "COMPLETED"
+
+
+def test_admin_can_arbitrate_fulfillment_for_merchant_and_reopen_capacity() -> None:
+    client, merchant_headers, first_model_headers, admin, order_id, _, fulfillment_ids = create_multi_fulfillments_for_dispute_test()
+    fulfillment_id = fulfillment_ids[0]
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/owned-product-review",
+        headers=merchant_headers,
+        json={"approved": True},
+    ).status_code == 200
+    assert client.post(
+        f"/api/orders/fulfillments/{fulfillment_id}/submissions",
+        headers=first_model_headers,
+        json={"submitted_media": [f"/uploads/13300000021-delivery-{index}.jpg" for index in range(6)] + ["/uploads/13300000021-delivery.mp4"]},
+    ).status_code == 201
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/dispute",
+        headers=first_model_headers,
+        json={"reason": "Talent requests arbitration"},
+    ).status_code == 200
+    arbitration = client.put(
+        f"/api/admin/fulfillments/{fulfillment_id}/arbitrate",
+        headers=admin,
+        json={"winner": "merchant", "remark": "Submission does not meet the brief"},
+    )
+    assert arbitration.status_code == 200
+    assert arbitration.json()["data"]["status"] == "CANCELLED"
+    with get_session_factory()() as session:
+        fulfillment = session.get(OrderFulfillment, fulfillment_id)
+        assert fulfillment is not None
+        assert fulfillment.slot_no is None
+    workspace = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers).json()["data"]
+    assert workspace["summary"]["available_quantity"] == 1
+    assert workspace["summary"]["recruitment_status"] == "OPEN", workspace
+
+
+def test_reapplying_after_cancelled_fulfillment_clears_stale_delivery_state() -> None:
+    client, merchant_headers, first_model_headers, admin, order_id, model_ids, fulfillment_ids = create_multi_fulfillments_for_dispute_test()
+    fulfillment_id = fulfillment_ids[0]
+    first_model_phone = "13300000021"
+
+    # Move the first slot through submission so it has state that must not
+    # leak into a later assignment after arbitration releases the slot.
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/owned-product-review",
+        headers=merchant_headers,
+        json={"approved": True},
+    ).status_code == 200
+    submitted = client.post(
+        f"/api/orders/fulfillments/{fulfillment_id}/submissions",
+        headers=first_model_headers,
+        json={"submitted_media": [f"/uploads/{first_model_phone}-delivery-{index}.jpg" for index in range(6)] + [f"/uploads/{first_model_phone}-delivery.mp4"]},
+    )
+    assert submitted.status_code == 201
+    assert client.put(
+        f"/api/orders/fulfillments/{fulfillment_id}/dispute",
+        headers=merchant_headers,
+        json={"reason": "Release this slot"},
+    ).status_code == 200
+    assert client.put(
+        f"/api/admin/fulfillments/{fulfillment_id}/arbitrate",
+        headers=admin,
+        json={"winner": "merchant", "remark": "Release this slot"},
+    ).status_code == 200
+
+    reapplied = client.post(
+        f"/api/orders/{order_id}/applications",
+        headers=first_model_headers,
+        json={"owned_product_images": [f"/uploads/{first_model_phone}-delivery-0.jpg"]},
+    )
+    assert reapplied.status_code == 201
+    applications = client.get(
+        "/api/admin/order-applications",
+        headers=admin,
+        params={"order_id": order_id, "status": "PENDING"},
+    ).json()["data"]["items"]
+    application_id = next(item["id"] for item in applications if item["applicant"]["id"] == model_ids[0])
+    assert client.put(
+        f"/api/admin/order-applications/{application_id}/review",
+        headers=admin,
+        json={"approved": True},
+    ).status_code == 200
+
+    workspace = client.get(f"/api/orders/{order_id}/workspace", headers=merchant_headers).json()["data"]
+    reassigned = next(item for item in workspace["fulfillments"] if item["id"] == fulfillment_id)
+    assert reassigned["status"] == "OWNED_PRODUCT_REVIEW"
+    assert reassigned["slot_no"] == 1
+    assert reassigned["ship_to_model_tracking_no"] is None
+    assert reassigned["return_tracking_no"] is None
+    assert reassigned["submitted_at"] is None
+    assert reassigned["returned_at"] is None
+    assert reassigned["completed_at"] is None
 
 
 def test_order_errors_use_a_uniform_envelope() -> None:

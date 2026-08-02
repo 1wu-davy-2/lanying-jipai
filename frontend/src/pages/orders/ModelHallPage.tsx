@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRightOutlined, PictureOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Image, Segmented, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, Button, Empty, Image, Pagination, Segmented, Skeleton, Space, Tag, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 
 import { getOrderHall, productSourceLabels } from "../../api/orders";
@@ -9,13 +9,18 @@ import { getTalentStatus } from "../../api/users";
 import { PRODUCT_CATEGORIES, productCategoryColor } from "../../constants/productCategories";
 
 const ALL_CATEGORIES = "all";
+const HALL_PAGE_SIZE = 20;
+
+type PagedOrderHallRequest = (category?: string, page?: number, pageSize?: number) => ReturnType<typeof getOrderHall>;
+const getPagedOrderHall = getOrderHall as PagedOrderHallRequest;
 
 export function ModelHallPage() {
   const navigate = useNavigate();
   const [category, setCategory] = useState(ALL_CATEGORIES);
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
-    queryKey: ["order-hall", category],
-    queryFn: () => getOrderHall(category === ALL_CATEGORIES ? undefined : category),
+    queryKey: ["order-hall", category, page],
+    queryFn: () => getPagedOrderHall(category === ALL_CATEGORIES ? undefined : category, page, HALL_PAGE_SIZE),
     refetchInterval: 15_000,
   });
   const { data: talentStatus } = useQuery({ queryKey: ["talent-status"], queryFn: getTalentStatus });
@@ -35,7 +40,7 @@ export function ModelHallPage() {
     </header>
     {talentStatus && <Alert className="talent-claim-status" type={talentStatus.can_claim ? "success" : "warning"} showIcon message={`${talentStatus.level.name}：同时最多 ${talentStatus.level.max_active_orders} 单，单笔不超过 ¥${talentStatus.level.max_commission_amount}`} description={talentStatus.can_claim ? `已完成 ${talentStatus.completed_orders} 单，当前进行中 ${talentStatus.active_orders} 单。` : talentStatus.profile_complete ? "实名认证审核通过后可正式接单。" : "请先在“我的”完成头像、用户名、收货地区和至少 6 张作品照片。"} />}
     <div className="hall-category-filter" aria-label="商品分类筛选">
-      <Segmented value={category} options={categoryOptions} onChange={(value) => setCategory(String(value))} />
+      <Segmented value={category} options={categoryOptions} onChange={(value) => { setCategory(String(value)); setPage(1); }} />
     </div>
     {isLoading ? <div className="talent-order-grid">{Array.from({ length: 6 }, (_, index) => <div className="talent-order-skeleton" key={index}><Skeleton active paragraph={{ rows: 4 }} /></div>)}</div> :
       (data?.items.length ?? 0) > 0 ? <div className="talent-order-grid">{data?.items.map((order) => {
@@ -55,5 +60,6 @@ export function ModelHallPage() {
           </div>
         </article>;
       })}</div> : <Empty description="该分类暂无可接订单" />}
+    {(data?.total ?? 0) > HALL_PAGE_SIZE && <Pagination className="talent-hall-pagination" current={page} pageSize={HALL_PAGE_SIZE} total={data?.total ?? 0} showSizeChanger={false} onChange={setPage} nextIcon={<span aria-label="下一页">下一页</span>} prevIcon={<span aria-label="上一页">上一页</span>} />}
   </section>;
 }

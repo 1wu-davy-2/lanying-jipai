@@ -309,8 +309,18 @@ body { margin: 0; min-width: 320px; }
 .fulfillment-drawer-talent { display: grid; gap: 16px; border-color: #dce8e4; }
 .fulfillment-drawer-talent h4.ant-typography { margin: 0 0 4px; }
 .fulfillment-drawer-section { border-color: #dce8e4; }
-.fulfillment-submission-body { display: grid; gap: 8px; margin: 6px 0 0 52px; }
+.fulfillment-drawer-section .ant-list-item { align-items: flex-start; flex-wrap: wrap; }
+.fulfillment-drawer-section .ant-list-item.fulfillment-submission-item { display: block; width: 100%; padding: 14px 0; }
+.fulfillment-submission-header { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; min-width: 0; }
+.fulfillment-submission-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.fulfillment-submission-meta { min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.fulfillment-submission-body { display: grid; gap: 8px; margin: 10px 0 0; }
 .fulfillment-submission-body .ant-typography { margin: 0; }
+.fulfillment-submission-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.fulfillment-message-board { border-color: #dce8e4; }
+.fulfillment-message-board .ant-list-item { align-items: flex-start; gap: 12px; }
+.fulfillment-message-board .ant-list-item-meta { min-width: 120px; margin-bottom: 0; }
+.fulfillment-message-content { flex: 1; min-width: 0; margin: 0 !important; white-space: pre-wrap; overflow-wrap: anywhere; }
 .admin-application-groups { display: grid; gap: 14px; }
 .admin-application-group { border-color: #dce8e4; }
 .admin-application-group .ant-card-head { border-color: #e7eeec; }
@@ -324,7 +334,6 @@ body { margin: 0; min-width: 320px; }
   .workspace-overview-card .ant-statistic-title { font-size: 12px; }
   .workspace-overview-card .ant-statistic-content { font-size: 20px; }
   .fulfillment-card-grid { grid-template-columns: 1fr; }
-  .fulfillment-submission-body { margin-left: 0; }
   .admin-application-group .ant-card-extra { display: none; }
   .admin-application-group .ant-list-item { flex-wrap: wrap; }
   .admin-application-group .ant-list-item-action { width: 100%; margin-left: 0; text-align: right; }

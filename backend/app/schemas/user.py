@@ -9,6 +9,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     role: Literal["merchant", "model"]
     nickname: str | None = Field(default=None, max_length=50)
+    registration_channel: str | None = Field(default=None, max_length=50)
 
 
 class LoginRequest(BaseModel):

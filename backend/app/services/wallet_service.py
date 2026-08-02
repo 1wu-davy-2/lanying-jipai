@@ -5,7 +5,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
-from app.models.order import FulfillmentSubmission, Order, OrderFulfillment, OrderLog
+from app.models.order import FulfillmentSubmission, Order, OrderApplication, OrderFulfillment, OrderLog
 from app.models.wallet import Wallet, WalletTransaction, Withdrawal
 from app.security import encrypt_sensitive
 from app.services.order_service import OrderConflictError, transition_order
@@ -149,6 +149,123 @@ def complete_fulfillment_and_settle(
     )
     session.flush()
     _complete_parent_order_when_ready(session, order, operator_id)
+
+
+def complete_disputed_fulfillment_and_settle(
+    session: Session,
+    fulfillment: OrderFulfillment,
+    operator_id: int,
+    remark: str,
+) -> None:
+    """Settle a disputed fulfillment after an admin awards the model.
+
+    The normal settlement helper deliberately requires a return/submission
+    state. Arbitration is the explicit exception: the decision itself closes
+    the dispute, so we use the same idempotent wallet path while presenting a
+    settled state to its invariant checks.
+    """
+    if fulfillment.status == "COMPLETED":
+        complete_fulfillment_and_settle(session, fulfillment, operator_id, remark)
+        return
+    if fulfillment.status != "DISPUTED":
+        raise OrderConflictError("Fulfillment is not awaiting arbitration")
+    latest_submission = session.scalar(
+        select(FulfillmentSubmission)
+        .where(FulfillmentSubmission.fulfillment_id == fulfillment.id)
+        .order_by(FulfillmentSubmission.version.desc())
+    )
+    if latest_submission is None or latest_submission.status != "APPROVED":
+        raise OrderConflictError("返图尚未审核通过，管理员不能直接判定达人完成")
+    fulfillment.status = "RETURNED"
+    try:
+        complete_fulfillment_and_settle(session, fulfillment, operator_id, remark)
+    except Exception:
+        if fulfillment.status != "COMPLETED":
+            fulfillment.status = "DISPUTED"
+        raise
+
+
+def arbitrate_fulfillment_dispute(
+    session: Session,
+    fulfillment: OrderFulfillment,
+    operator_id: int,
+    winner: str,
+    remark: str,
+) -> None:
+    """Apply one admin decision to a multi-talent fulfillment dispute."""
+    if winner not in {"model", "merchant"}:
+        raise OrderConflictError("winner must be model or merchant")
+    order = session.get(Order, fulfillment.order_id)
+    if order is None:
+        raise OrderConflictError("Fulfillment parent order does not exist")
+
+    # Repeating the same decision is safe: model settlement is protected by
+    # the wallet transaction idempotency key, while a cancelled fulfillment
+    # has no active slot left to release a second time.
+    if fulfillment.status == "COMPLETED":
+        if winner != "model":
+            raise OrderConflictError("Completed fulfillment cannot be awarded to the merchant")
+        complete_disputed_fulfillment_and_settle(session, fulfillment, operator_id, remark)
+        return
+    if fulfillment.status == "CANCELLED":
+        if winner == "merchant":
+            return
+        raise OrderConflictError("Cancelled fulfillment cannot be awarded to the model")
+    if fulfillment.status != "DISPUTED":
+        raise OrderConflictError("Fulfillment is not awaiting arbitration")
+
+    if winner == "model":
+        complete_disputed_fulfillment_and_settle(session, fulfillment, operator_id, remark)
+        return
+
+    now = datetime.now(timezone.utc)
+    previous_order_status = order.status
+    losing_model_id = fulfillment.model_id
+    fulfillment.status = "CANCELLED"
+    fulfillment.slot_no = None
+    fulfillment.reject_reason = remark.strip() or None
+
+    application = session.get(OrderApplication, fulfillment.application_id)
+    if application is not None:
+        application.status = "REJECTED"
+        application.reviewer_id = operator_id
+        application.reviewed_at = now
+        application.review_reason = remark.strip() or "Admin arbitration awarded the merchant"
+
+    if order.model_id == losing_model_id:
+        order.model_id = session.scalar(
+            select(OrderFulfillment.model_id)
+            .where(
+                OrderFulfillment.order_id == order.id,
+                OrderFulfillment.status != "CANCELLED",
+            )
+            .order_by(OrderFulfillment.slot_no.asc(), OrderFulfillment.id.asc())
+        )
+
+    session.flush()
+    active_count = session.scalar(
+        select(func.count())
+        .select_from(OrderFulfillment)
+        .where(
+            OrderFulfillment.order_id == order.id,
+            OrderFulfillment.status != "CANCELLED",
+        )
+    ) or 0
+    if active_count < order.quantity and order.status != "PUBLISHED":
+        order.status = "PUBLISHED"
+        order.updated_at = now
+    if active_count < order.quantity and order.status == "PUBLISHED":
+        order.updated_at = now
+
+    session.add(
+        OrderLog(
+            order_id=order.id,
+            operator_id=operator_id,
+            from_status=previous_order_status,
+            to_status="PUBLISHED" if order.status == "PUBLISHED" else previous_order_status,
+            remark=f"Admin arbitration awarded merchant for fulfillment {fulfillment.id}: {remark}",
+        )
+    )
 
 
 def _complete_parent_order_when_ready(session: Session, order: Order, operator_id: int) -> None:

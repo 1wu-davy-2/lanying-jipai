@@ -13,11 +13,22 @@ from app.models.order import Order, OrderApplication, OrderFulfillment, OrderLog
 from app.models.script import ScriptCategory, ScriptDocument
 from app.models.user import User
 from app.models.wallet import Withdrawal
-from app.routers.orders import ensure_legacy_single_order, get_order, new_published_order, serialize_fulfillment, serialize_order
+from app.routers.orders import (
+    ensure_legacy_single_order,
+    fulfillment_summary,
+    get_order,
+    new_published_order,
+    serialize_fulfillment,
+    serialize_order,
+)
 from app.schemas.order import AdminOrderCreateRequest, ApplicationReviewRequest, ArbitrationRequest, RejectOrderRequest, ShipmentRequest
 from app.services.order_service import OrderConflictError, approve_order_application, transition_order
 from app.services.talent_level import talent_status
-from app.services.wallet_service import WalletConflictError, complete_order_and_settle
+from app.services.wallet_service import (
+    WalletConflictError,
+    arbitrate_fulfillment_dispute,
+    complete_order_and_settle,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -119,6 +130,14 @@ def serialize_application(application: OrderApplication, session: Session) -> di
     applicant = session.get(User, application.model_id)
     order = session.get(Order, application.order_id)
     fulfillment = session.scalar(select(OrderFulfillment).where(OrderFulfillment.application_id == application.id))
+    order_data = None
+    if order is not None:
+        order_data = serialize_order(order)
+        # The application page groups rows by parent order and uses these
+        # counters to disable approval once all slots are occupied.  Include
+        # the authoritative summary instead of forcing the UI to infer it
+        # from whichever page/status filter happened to be loaded.
+        order_data.update(fulfillment_summary(order, session))
     return {
         "id": application.id,
         "status": application.status,
@@ -135,7 +154,7 @@ def serialize_application(application: OrderApplication, session: Session) -> di
             "verify_status": applicant.verify_status,
             "level": talent_status(session, applicant)["level"]["code"],
         },
-        "order": serialize_order(order) if order else None,
+        "order": order_data,
     }
 
 
@@ -276,6 +295,54 @@ def list_disputed_orders(
     session: Session = Depends(get_db),
 ) -> dict[str, object]:
     return {"code": 0, "message": "ok", "data": orders_page(session, "DISPUTED", None, False, None, page, page_size)}
+
+
+@router.get("/fulfillment-disputes")
+def list_fulfillment_disputes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    _: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    statement = select(OrderFulfillment).where(OrderFulfillment.status == "DISPUTED")
+    total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
+    fulfillments = list(
+        session.scalars(
+            statement.order_by(OrderFulfillment.updated_at.asc(), OrderFulfillment.id.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    )
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "items": [serialize_fulfillment(item, session) for item in fulfillments],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        },
+    }
+
+
+@router.put("/fulfillments/{fulfillment_id}/arbitrate")
+def arbitrate_fulfillment(
+    fulfillment_id: int,
+    payload: ArbitrationRequest,
+    admin: User = Depends(require_role("admin")),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    fulfillment = session.get(OrderFulfillment, fulfillment_id)
+    if fulfillment is None:
+        raise HTTPException(status_code=404, detail="Fulfillment does not exist")
+    try:
+        arbitrate_fulfillment_dispute(session, fulfillment, admin.id, payload.winner, payload.remark)
+        session.commit()
+        session.refresh(fulfillment)
+    except (OrderConflictError, WalletConflictError, IntegrityError) as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail=str(exc) or "Fulfillment arbitration failed") from exc
+    return {"code": 0, "message": "ok", "data": serialize_fulfillment(fulfillment, session)}
 
 
 def operate_for_merchant(

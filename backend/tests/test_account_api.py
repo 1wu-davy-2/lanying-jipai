@@ -31,6 +31,27 @@ def test_register_login_and_read_current_user() -> None:
     assert me.json()["data"]["merchant_profile"] is not None
 
 
+def test_model_registration_keeps_nickname_and_acquisition_channel() -> None:
+    client = TestClient(app)
+    registration = client.post(
+        "/api/auth/register",
+        json={
+            "phone": "13800138009",
+            "password": "secure-password",
+            "role": "model",
+            "nickname": "试镜达人",
+            "registration_channel": "douyin",
+        },
+    )
+
+    assert registration.status_code == 201
+    token = registration.json()["data"]["access_token"]
+    me = client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["data"]["nickname"] == "试镜达人"
+    assert me.json()["data"]["registration_channel"] == "douyin"
+
+
 def test_merchant_can_update_profile_and_submit_verification() -> None:
     client = TestClient(app)
     registration = client.post(

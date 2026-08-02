@@ -85,6 +85,7 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
     </>}
   </Card>;
   return <div className="profile-page">
+    {role === "model" && data && <Typography.Text className="talent-registration-channel">注册来源：{data.registration_channel || "未填写"}</Typography.Text>}
     <div className="page-heading profile-heading"><div><Typography.Text className="talent-page-kicker">{role === "model" ? "个人账户" : "店铺账户"}</Typography.Text><Typography.Title level={2}>{title}</Typography.Title>{role === "model" && <Typography.Text type="secondary">认证、接单资料和作品集集中维护。</Typography.Text>}</div><Space wrap><Tag color={verified ? "success" : "gold"}>{verified ? "已认证" : "待认证"}</Tag>{role === "model" && !editing && <Button icon={<EditOutlined aria-hidden="true" />} onClick={() => setEditing(true)}>维护接单资料</Button>}</Space></div>
     {isLoading ? <Skeleton active /> : role === "model" && !editing && data ? <Row gutter={[20, 20]}>
       <Col xs={24} lg={15}>

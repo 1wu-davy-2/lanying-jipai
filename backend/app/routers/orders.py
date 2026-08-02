@@ -31,6 +31,16 @@ from app.utils.order_no import new_order_no
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
+# A dispute is a review/acceptance escalation, not a shortcut around the
+# assignment and shipping steps.  Keeping this list explicit also prevents a
+# model or merchant from freezing an order while it is still being allocated.
+DISPUTABLE_FULFILLMENT_STATUSES = {
+    "SUBMITTED",
+    "REVISION_REQUIRED",
+    "WAITING_RETURN",
+    "RETURNED",
+}
+
 
 def order_categories(order: Order) -> list[str]:
     return json.loads(order.product_categories or "[]")
@@ -86,6 +96,26 @@ def serialize_submission(submission: FulfillmentSubmission) -> dict[str, object]
         "submitted_at": _time_value(submission.submitted_at),
         "reviewed_at": _time_value(submission.reviewed_at),
         "created_at": _time_value(submission.created_at),
+    }
+
+
+def serialize_message(message: OrderMessage, session: Session) -> dict[str, object]:
+    sender = session.get(User, message.sender_id)
+    return {
+        "id": message.id,
+        "order_id": message.order_id,
+        "fulfillment_id": message.fulfillment_id,
+        "sender_id": message.sender_id,
+        "content": message.content,
+        "created_at": _time_value(message.created_at),
+        "sender": None
+        if sender is None
+        else {
+            "id": sender.id,
+            "nickname": sender.nickname,
+            "avatar_url": sender.avatar_url,
+            "role": sender.role,
+        },
     }
 
 
@@ -663,6 +693,49 @@ def fulfillment_detail(
     return {"code": 0, "message": "ok", "data": serialize_fulfillment(fulfillment, session)}
 
 
+@router.post("/fulfillments/{fulfillment_id}/messages", status_code=status.HTTP_201_CREATED)
+def create_fulfillment_message(
+    fulfillment_id: int,
+    payload: OrderMessageRequest,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    fulfillment = get_fulfillment(session, fulfillment_id)
+    ensure_fulfillment_access(fulfillment, user, session)
+    message = OrderMessage(
+        order_id=fulfillment.order_id,
+        fulfillment_id=fulfillment.id,
+        sender_id=user.id,
+        content=payload.content,
+    )
+    session.add(message)
+    session.commit()
+    session.refresh(message)
+    return {"code": 0, "message": "ok", "data": serialize_message(message, session)}
+
+
+@router.get("/fulfillments/{fulfillment_id}/messages")
+def list_fulfillment_messages(
+    fulfillment_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    fulfillment = get_fulfillment(session, fulfillment_id)
+    ensure_fulfillment_access(fulfillment, user, session)
+    messages = list(
+        session.scalars(
+            select(OrderMessage)
+            .where(OrderMessage.fulfillment_id == fulfillment.id)
+            .order_by(OrderMessage.created_at.asc(), OrderMessage.id.asc())
+        )
+    )
+    return {
+        "code": 0,
+        "message": "ok",
+        "data": {"items": [serialize_message(item, session) for item in messages], "total": len(messages)},
+    }
+
+
 @router.put("/fulfillments/{fulfillment_id}/ship")
 def ship_fulfillment(
     fulfillment_id: int,
@@ -806,8 +879,10 @@ def dispute_fulfillment(
         raise HTTPException(status_code=403, detail="No permission to dispute this fulfillment")
     if user.role == "model" and fulfillment.model_id != user.id:
         raise HTTPException(status_code=403, detail="No permission to dispute this fulfillment")
-    if fulfillment.status in {"COMPLETED", "CANCELLED"}:
-        raise HTTPException(status_code=409, detail="已完成或取消的履约实例不能申诉")
+    if fulfillment.status == "DISPUTED":
+        raise HTTPException(status_code=409, detail="该履约实例已进入争议处理")
+    if fulfillment.status not in DISPUTABLE_FULFILLMENT_STATUSES:
+        raise HTTPException(status_code=409, detail="当前履约阶段不能发起争议")
     fulfillment.status = "DISPUTED"
     fulfillment.reject_reason = payload.reason
     session.commit()
@@ -866,7 +941,11 @@ def create_fulfillment_submission(
     session.add(submission)
     fulfillment.status = "SUBMITTED"
     fulfillment.submitted_at = now
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="A newer submission was already created; refresh and try again") from exc
     session.refresh(submission)
     return {"code": 0, "message": "Submission created", "data": serialize_submission(submission)}
 
@@ -891,8 +970,10 @@ def review_fulfillment_submission(
     )
     if submission is None:
         raise HTTPException(status_code=404, detail="Submission does not exist")
-    if submission.status != "PENDING_REVIEW" or fulfillment.status != "SUBMITTED":
+    if submission.status != "PENDING_REVIEW":
         raise HTTPException(status_code=409, detail="Submission has already been reviewed")
+    if fulfillment.status != "SUBMITTED":
+        raise HTTPException(status_code=409, detail="Fulfillment is not awaiting submission review")
     now = datetime.now(timezone.utc)
     submission.status = "APPROVED" if payload.approved else "REVISION_REQUIRED"
     submission.review_reason = (payload.reason or "").strip() or None
@@ -901,9 +982,11 @@ def review_fulfillment_submission(
     fulfillment.reviewed_at = now
     try:
         if payload.approved:
+            fulfillment.reject_reason = None
             if fulfillment.return_required:
                 fulfillment.status = "WAITING_RETURN"
             else:
+                fulfillment.status = "SUBMITTED"
                 complete_fulfillment_and_settle(session, fulfillment, user.id)
         else:
             fulfillment.status = "REVISION_REQUIRED"
@@ -1096,7 +1179,7 @@ def cancel_order(order_id: int, user: User = Depends(require_role("merchant")), 
 def create_message(order_id: int, payload: OrderMessageRequest, user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> dict[str, object]:
     order = get_order(session, order_id)
     ensure_order_member(order, user)
-    message = OrderMessage(order_id=order.id, sender_id=user.id, content=payload.content)
+    message = OrderMessage(order_id=order.id, fulfillment_id=None, sender_id=user.id, content=payload.content)
     session.add(message)
     session.commit()
     session.refresh(message)
@@ -1107,5 +1190,11 @@ def create_message(order_id: int, payload: OrderMessageRequest, user: User = Dep
 def list_messages(order_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> dict[str, object]:
     order = get_order(session, order_id)
     ensure_order_member(order, user)
-    messages = list(session.scalars(select(OrderMessage).where(OrderMessage.order_id == order_id).order_by(OrderMessage.created_at.asc())))
+    messages = list(
+        session.scalars(
+            select(OrderMessage)
+            .where(OrderMessage.order_id == order_id, OrderMessage.fulfillment_id.is_(None))
+            .order_by(OrderMessage.created_at.asc())
+        )
+    )
     return {"code": 0, "message": "ok", "data": {"items": [{"id": item.id, "sender_id": item.sender_id, "content": item.content, "created_at": item.created_at.isoformat() if item.created_at else None} for item in messages], "total": len(messages)}}

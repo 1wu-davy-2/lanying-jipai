@@ -24,6 +24,7 @@ class User(TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), index=True, nullable=False)
     nickname: Mapped[str] = mapped_column(String(50), nullable=False)
+    registration_channel: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     real_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
