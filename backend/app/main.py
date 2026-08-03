@@ -40,12 +40,13 @@ app = FastAPI(
 
 cors_origins = [origin.strip() for origin in Settings().cors_origins.split(",") if origin.strip()]
 if cors_origins:
+    _wildcard = cors_origins == ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
         allow_credentials=False,
-        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["*"] if _wildcard else ["GET", "POST", "PUT", "OPTIONS"],
+        allow_headers=["*"] if _wildcard else ["Authorization", "Content-Type"],
     )
 
 _ERROR_CODES = {400: 1001, 401: 1002, 403: 1003, 404: 1004, 409: 1005}

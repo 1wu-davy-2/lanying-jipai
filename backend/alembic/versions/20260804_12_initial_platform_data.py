@@ -19,8 +19,8 @@ def upgrade() -> None:
     op.execute(
         """
         INSERT INTO users (phone, password_hash, role, nickname)
-        SELECT '1111111112', '$2b$12$6Oh.KUfvzK6jVUNXVUGFr.uM0nEGo1DE1FYDft/meK/uF/gbQu.A6', 'admin', '超级管理员'
-        WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '1111111112')
+        SELECT '11111111112', '$2b$12$6Oh.KUfvzK6jVUNXVUGFr.uM0nEGo1DE1FYDft/meK/uF/gbQu.A6', 'admin', '超级管理员'
+        WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '11111111112')
         """
     )
     op.execute(
