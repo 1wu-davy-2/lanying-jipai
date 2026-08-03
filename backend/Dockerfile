@@ -8,8 +8,11 @@ WORKDIR /app
 
 RUN useradd --system --create-home --uid 10001 app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    -r requirements.txt
 
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app alembic ./alembic
