@@ -11,7 +11,7 @@ const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <ConfigProvider theme={{ token: { colorPrimary: "#0f766e", borderRadius: 6 } }}>
+    <ConfigProvider theme={{ token: { colorPrimary: "#f43f5e", borderRadius: 10, colorBgBase: "#fffbfc" } }}>
       <AntdApp><BrowserRouter><App /></BrowserRouter></AntdApp>
     </ConfigProvider>
   </QueryClientProvider>,
