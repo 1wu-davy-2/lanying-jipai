@@ -41,7 +41,7 @@ export function LoginPage({ portal }: { portal?: PortalRole }) {
     <AuthFrame>
       <div className="auth-form-wrap">
         <Typography.Title level={1}>{portal === "admin" ? "运营管理端登录" : portal === "model" ? "达人端登录" : "登录"}</Typography.Title>
-        <Typography.Paragraph className="auth-subtitle">{portal === "admin" ? "进入运营发单与审核工作台" : portal === "model" ? "进入抢单、交付与收入工作台" : "进入寄拍订单工作台"}</Typography.Paragraph>
+        <Typography.Paragraph className="auth-subtitle">{portal === "admin" ? "进入运营发单与审核工作台" : portal === "model" ? "进入接单申请、交付与收入工作台" : "进入寄拍订单工作台"}</Typography.Paragraph>
         <Form layout="vertical" onFinish={submit} requiredMark={false}>
           <Form.Item name="phone" label="手机号" rules={[{ required: true, message: "请输入手机号" }]}>
             <Input size="large" inputMode="tel" autoComplete="tel" />

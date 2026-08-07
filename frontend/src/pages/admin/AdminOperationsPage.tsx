@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Empty, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, Tabs, Typography, message } from "antd";
+import { Button, Empty, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Switch, Table, Tabs, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 
 import { createAdminMerchant, createAdminOrder, getAdminOrders, getAdminUsers } from "../../api/admin";
@@ -63,7 +63,7 @@ export function AdminOperationsPage() {
     queryKey: ["operation-merchants"],
     queryFn: () => getAdminUsers({ role: "merchant", status: "active", page_size: "100" }),
   });
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, error } = useQuery({
     queryKey: ["operation-orders", merchantId, status, page],
     queryFn: () => getAdminOrders({ merchant_id: merchantId, status_filter: status === "all" ? undefined : status, page }),
     enabled: merchantId !== undefined,
@@ -119,7 +119,7 @@ export function AdminOperationsPage() {
 
   return <div>
     <div className="page-heading">
-      <Typography.Title level={2}>运营发单</Typography.Title>
+      <div><Typography.Title level={2}>运营发单</Typography.Title><Typography.Text type="secondary">按商家归属发布订单并跟踪招募进度。</Typography.Text></div>
       <Button onClick={() => setMerchantOpen(true)}>新建商家</Button>
     </div>
     <Space wrap className="filter-bar">
@@ -129,7 +129,7 @@ export function AdminOperationsPage() {
         placeholder="选择商家"
         showSearch
         optionFilterProp="label"
-        style={{ minWidth: 280 }}
+        className="admin-merchant-select"
         options={(merchants?.items ?? []).map((merchant) => ({
           value: merchant.id,
           label: `${merchant.merchant_profile?.shop_name || merchant.nickname} · ${merchant.phone}`,
@@ -140,19 +140,29 @@ export function AdminOperationsPage() {
     </Space>
     {merchantId ? <>
       <Tabs activeKey={status} onChange={(key) => { setStatus(key as OrderStatus | "all"); setPage(1); }} items={tabs} />
-      <Table
-        rowKey="id"
-        loading={isLoading}
-        dataSource={orders?.items ?? []}
-        pagination={{ current: page, pageSize: 20, total: orders?.total ?? 0, onChange: setPage, showSizeChanger: false }}
-        onRow={(record) => ({ onClick: () => navigate(`/admin/orders/${record.id}`), className: "table-row-link" })}
-        columns={[
-          { title: "订单", render: (_, order) => <div><strong>{order.title}</strong><div className="muted-text">{order.order_no}</div></div> },
-          { title: "佣金", dataIndex: "commission_amount", render: (value) => `¥${value}` },
-          { title: "状态", dataIndex: "status", render: (value) => <OrderStatusTag status={value} /> },
-          { title: "创建时间", dataIndex: "created_at", render: (value) => value ? new Date(value).toLocaleString() : "-" },
-        ]}
-      />
+      {isLoading ? <Skeleton active paragraph={{ rows: 6 }} /> : error ? <Empty description="订单加载失败，请稍后重试" /> :
+        <div className="admin-orders-panels">
+          <div className="admin-mobile-orders">
+            {orders?.items.map((order) => <button type="button" className="admin-mobile-order" key={order.id} onClick={() => navigate(`/admin/orders/${order.id}`)}>
+              <span className="admin-mobile-order-heading"><strong>{order.title}</strong><OrderStatusTag status={order.status} /></span>
+              <span className="admin-mobile-order-number">{order.order_no}</span>
+              <span className="admin-mobile-order-footer"><span>佣金</span><b>¥{order.commission_amount}</b></span>
+            </button>)}
+          </div>
+          <Table
+            rowKey="id"
+            loading={isLoading}
+            dataSource={orders?.items ?? []}
+            pagination={{ current: page, pageSize: 20, total: orders?.total ?? 0, onChange: setPage, showSizeChanger: false }}
+            onRow={(record) => ({ onClick: () => navigate(`/admin/orders/${record.id}`), className: "table-row-link" })}
+            columns={[
+              { title: "订单", render: (_, order) => <div><strong>{order.title}</strong><div className="muted-text">{order.order_no}</div></div> },
+              { title: "佣金", dataIndex: "commission_amount", render: (value) => `¥${value}` },
+              { title: "状态", dataIndex: "status", render: (value) => <OrderStatusTag status={value} /> },
+              { title: "创建时间", dataIndex: "created_at", render: (value) => value ? new Date(value).toLocaleString() : "-" },
+            ]}
+          />
+        </div>}
     </> : <Empty description="选择商家后查看或发布订单" />}
     <Modal title="新建商家" open={merchantOpen} onCancel={() => { setMerchantOpen(false); merchantForm.resetFields(); }} footer={null} destroyOnHidden>
       <Form form={merchantForm} layout="vertical" onFinish={createMerchant} requiredMark={false}>
@@ -166,21 +176,33 @@ export function AdminOperationsPage() {
         <Button type="primary" htmlType="submit" loading={saving}>确认创建</Button>
       </Form>
     </Modal>
-    <Modal title="发布寄拍订单" open={publishOpen} onCancel={() => { setPublishOpen(false); publishForm.resetFields(); setSampleImages([]); }} footer={null} destroyOnHidden>
+    <Modal className="admin-publish-modal" title="发布寄拍订单" open={publishOpen} onCancel={() => { setPublishOpen(false); publishForm.resetFields(); setSampleImages([]); }} footer={null} destroyOnHidden>
       <Form form={publishForm} layout="vertical" onFinish={publish} requiredMark={false} initialValues={{ order_type: "product_photo", quantity: 1, required_media_count: 6, delivery_days: 5, deposit_required: false, return_required: true, product_source: "merchant_ship", product_subsidy_amount: 0 }}>
-        <Form.Item name="order_type" label="订单类型" rules={[{ required: true, message: "请选择订单类型" }]}><Select options={[{ value: "product_photo", label: "商品平拍" }, { value: "try_on", label: "试穿展示" }, { value: "short_video", label: "短视频素材" }, { value: "live_show", label: "直播展示" }]} /></Form.Item>
-        <Form.Item name="product_categories" label="商品分类" rules={[{ required: true, message: "请选择至少一个商品分类" }, { type: "array", min: 1, max: 3, message: "请选择 1 至 3 个商品分类" }]}>
-          <Select mode="multiple" maxCount={3} options={PRODUCT_CATEGORY_OPTIONS} placeholder="选择 1 至 3 个分类" />
-        </Form.Item>
-        <Form.Item name="title" label="订单标题" rules={[{ required: true, message: "请输入订单标题" }]}><Input maxLength={100} /></Form.Item>
-        <Form.Item name="description" label="拍摄说明" rules={[{ required: true, message: "请输入拍摄说明" }]}><Input.TextArea rows={4} /></Form.Item>
-        <Form.Item label="样品图片"><OrderMediaUpload value={sampleImages} onChange={setSampleImages} accept="image" /></Form.Item>
-        <div className="publish-number-grid"><Form.Item name="quantity" label="寄拍数量" rules={[{ required: true }]}><InputNumber min={1} max={1000} className="field-full" suffix="件" /></Form.Item><Form.Item name="required_media_count" label="交付素材" rules={[{ required: true }]}><InputNumber min={1} max={100} className="field-full" suffix="份起" /></Form.Item><Form.Item name="delivery_days" label="收货后交付" rules={[{ required: true }]}><InputNumber min={1} max={30} className="field-full" suffix="天内" /></Form.Item></div>
-        <Form.Item name="commission_amount" label="佣金" rules={[{ required: true, message: "请输入佣金" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item>
-        <Form.Item name="deposit_required" label="需要缴纳押金" valuePropName="checked"><Switch /></Form.Item>
-        <Form.Item noStyle shouldUpdate={(previous, current) => previous.deposit_required !== current.deposit_required}>{({ getFieldValue }) => getFieldValue("deposit_required") ? <Form.Item name="deposit_amount" label="押金金额" rules={[{ required: true, message: "请输入押金金额" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item> : null}</Form.Item>
-        <OrderFulfillmentFormItems />
-        <Form.Item name="shoot_requirements" label="交付要求"><Input.TextArea rows={2} /></Form.Item>
+        <section className="publish-form-section">
+          <div className="publish-form-section-heading"><Typography.Title level={5}>商品与合作</Typography.Title><Typography.Text type="secondary">确定订单类型、分类和拍摄说明。</Typography.Text></div>
+          <Form.Item name="order_type" label="订单类型" rules={[{ required: true, message: "请选择订单类型" }]}><Select options={[{ value: "product_photo", label: "商品平拍" }, { value: "try_on", label: "试穿展示" }, { value: "short_video", label: "短视频素材" }, { value: "live_show", label: "直播展示" }]} /></Form.Item>
+          <Form.Item name="product_categories" label="商品分类" rules={[{ required: true, message: "请选择至少一个商品分类" }, { type: "array", min: 1, max: 3, message: "请选择 1 至 3 个商品分类" }]}>
+            <Select mode="multiple" maxCount={3} options={PRODUCT_CATEGORY_OPTIONS} placeholder="选择 1 至 3 个分类" />
+          </Form.Item>
+          <Form.Item name="title" label="订单标题" rules={[{ required: true, message: "请输入订单标题" }]}><Input maxLength={100} /></Form.Item>
+          <Form.Item name="description" label="拍摄说明" rules={[{ required: true, message: "请输入拍摄说明" }]}><Input.TextArea rows={4} /></Form.Item>
+        </section>
+        <section className="publish-form-section">
+          <div className="publish-form-section-heading"><Typography.Title level={5}>样品处理</Typography.Title><Typography.Text type="secondary">样品如何到达达人、拍摄后如何处置。</Typography.Text></div>
+          <Form.Item label="样品图片"><OrderMediaUpload value={sampleImages} onChange={setSampleImages} accept="image" /></Form.Item>
+          <OrderFulfillmentFormItems />
+        </section>
+        <section className="publish-form-section">
+          <div className="publish-form-section-heading"><Typography.Title level={5}>数量与费用</Typography.Title><Typography.Text type="secondary">名额数量、交付标准与费用。</Typography.Text></div>
+          <div className="publish-number-grid"><Form.Item name="quantity" label="寄拍数量" rules={[{ required: true }]}><InputNumber min={1} max={1000} className="field-full" suffix="件" /></Form.Item><Form.Item name="required_media_count" label="交付素材" rules={[{ required: true }]}><InputNumber min={1} max={100} className="field-full" suffix="份起" /></Form.Item><Form.Item name="delivery_days" label="收货后交付" rules={[{ required: true }]}><InputNumber min={1} max={30} className="field-full" suffix="天内" /></Form.Item></div>
+          <Form.Item name="commission_amount" label="佣金" rules={[{ required: true, message: "请输入佣金" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item>
+          <Form.Item name="deposit_required" label="需要缴纳押金" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item noStyle shouldUpdate={(previous, current) => previous.deposit_required !== current.deposit_required}>{({ getFieldValue }) => getFieldValue("deposit_required") ? <Form.Item name="deposit_amount" label="押金金额" rules={[{ required: true, message: "请输入押金金额" }]}><InputNumber min={0.01} precision={2} className="field-full" prefix="¥" /></Form.Item> : null}</Form.Item>
+        </section>
+        <section className="publish-form-section">
+          <div className="publish-form-section-heading"><Typography.Title level={5}>交付要求</Typography.Title><Typography.Text type="secondary">拍摄与返图的补充要求。</Typography.Text></div>
+          <Form.Item name="shoot_requirements" label="交付要求"><Input.TextArea rows={2} /></Form.Item>
+        </section>
         <Button type="primary" htmlType="submit" loading={saving}>确认发布</Button>
       </Form>
     </Modal>

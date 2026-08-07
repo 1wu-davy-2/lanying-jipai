@@ -57,4 +57,27 @@ describe("AdminApplicationsPage", () => {
     expect(screen.getByText("订单名额已满，不能再分配达人")).toBeVisible();
     expect(screen.getByText("第 1-20 条，共 21 条")).toBeVisible();
   });
+
+  it("shows the owned product image count scoped to each applicant", async () => {
+    mocks.getAdminOrderApplications.mockResolvedValue({
+      items: [
+        {
+          id: 10, status: "PENDING", message: "申请说明", owned_product_images: ["https://example.com/a.jpg"], review_reason: null, created_at: null, reviewed_at: null,
+          applicant: { id: 7, nickname: "达人甲", avatar_url: null, verify_status: "verified", level: "L2" },
+          order: { id: 3, order_no: "ORDER-3", title: "满额订单", quantity: 1, approved_quantity: 1, available_quantity: 0, recruitment_status: "FULL" },
+        },
+      ],
+      total: 1, page: 1, page_size: 20,
+    });
+    renderPage();
+
+    expect(await screen.findByText("已上传 1 张同款实拍图")).toBeVisible();
+  });
+
+  it("shows an empty state for a filtered application list", async () => {
+    mocks.getAdminOrderApplications.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20 });
+    renderPage();
+
+    expect(await screen.findByText("暂无符合条件的申请")).toBeVisible();
+  });
 });

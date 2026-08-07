@@ -1,0 +1,95 @@
+/* 达人资料、入驻与榜单：/model/profile、/model/onboarding、/model/onboarding/verify、/model/ranking */
+.profile-heading { align-items: flex-end; }
+.talent-profile-overview { display: grid; gap: 24px; padding: 26px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.talent-profile-hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--color-border); }
+.talent-profile-hero .ant-avatar { width: 88px; height: 88px; flex: 0 0 auto; font-size: 30px; }
+.talent-profile-hero h3.ant-typography { margin: 1px 0 8px; overflow-wrap: anywhere; }
+.talent-profile-hero h4.ant-typography { margin: 0 0 2px; color: var(--color-ink-600); font-size: 13px; font-weight: 500; }
+.talent-profile-verification-copy { display: block; margin-top: 9px; color: var(--color-ink-600); font-size: 13px; }
+.talent-profile-section { display: grid; gap: 14px; }
+.talent-profile-section h4.ant-typography { margin: 0; }
+.talent-profile-contact { gap: 6px; padding: 16px; border-left: 3px solid var(--color-brand-600); background: var(--color-canvas); }
+.talent-profile-contact .ant-btn { width: fit-content; padding-left: 0; }
+.talent-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+}
+.talent-profile-stats div { display: grid; gap: 4px; padding: 14px; border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.talent-profile-stats strong { color: var(--color-trust-600); font-size: 20px; font-variant-numeric: tabular-nums; }
+.talent-profile-stats span { color: var(--color-ink-600); font-size: 12px; }
+.talent-profile-portfolio h4.ant-typography { margin: 0 0 12px; }
+.talent-profile-portfolio .ant-image { width: calc(25% - 8px); margin: 0 8px 8px 0; aspect-ratio: 1; overflow: hidden; background: var(--color-brand-050); border-radius: var(--radius-sm); }
+.talent-profile-portfolio .ant-image img { width: 100%; height: 100%; object-fit: cover; }
+.talent-onboarding { max-width: 780px; margin: 0 auto; }
+.talent-onboarding-heading { align-items: flex-end; margin-bottom: 18px; }
+.talent-onboarding-heading h2.ant-typography { margin: 3px 0 5px; }
+.talent-onboarding-steps { margin-bottom: 20px; padding: 18px 22px; border: 1px solid var(--color-border); background: var(--color-surface); }
+.talent-onboarding-steps .ant-steps-item-title { color: var(--color-ink-900) !important; font-weight: 650; }
+.talent-onboarding-steps .ant-steps-item-description { color: var(--color-ink-600) !important; }
+.talent-onboarding-steps .ant-steps-item-process .ant-steps-item-icon { background: var(--color-brand-600); border-color: var(--color-brand-600); }
+.talent-onboarding-steps .ant-steps-item-finish .ant-steps-item-icon { border-color: var(--color-brand-600); }
+.talent-onboarding-steps .ant-steps-item-finish .ant-steps-icon, .talent-onboarding-steps .ant-steps-item-finish .ant-steps-item-tail::after { color: var(--color-brand-600); background-color: var(--color-brand-600); }
+.talent-onboarding-panel { border-color: var(--color-border); }
+.talent-onboarding-panel .ant-card-head { border-color: var(--color-border); }
+.talent-form-section { padding: 4px 0 22px; }
+.talent-form-section + .talent-form-section { padding-top: 22px; border-top: 1px solid var(--color-border); }
+.talent-form-section-heading { display: grid; gap: 3px; margin-bottom: 18px; }
+.talent-form-section-heading h4.ant-typography { margin: 0; color: var(--color-ink-900); }
+.talent-form-section-heading .ant-typography { font-size: 13px; }
+
+/* 榜单：前三名金/灰银/柔铜的克制序号，不用营销视觉 */
+.ranking-list { display: grid; gap: 10px; margin-top: 18px; }
+.ranking-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+.ranking-row:last-child { border-bottom: 0; }
+.ranking-place {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-600);
+  background: var(--color-canvas);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.ranking-place-1 { color: var(--color-warning-700); background: var(--color-money-050); border: 1px solid currentColor; }
+.ranking-place-2 { color: var(--color-ink-600); background: var(--color-canvas); border: 1px solid currentColor; }
+.ranking-place-3 { color: var(--color-money-700); background: var(--color-money-050); border: 1px solid currentColor; }
+.ranking-place .anticon { font-size: 18px; }
+.ranking-person { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.ranking-person strong { min-width: 0; overflow: hidden; color: var(--color-ink-900); text-overflow: ellipsis; white-space: nowrap; }
+.ranking-stats { display: grid; gap: 2px; text-align: right; }
+.ranking-stats span { color: var(--color-ink-600); font-size: 12px; }
+.ranking-stats b { color: var(--color-money-700); font-size: 16px; font-variant-numeric: tabular-nums; }
+/* 等级规则紧凑说明带，不做三张营销卡 */
+.ranking-rule-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.ranking-rule-strip > div { display: grid; gap: 4px; padding: 14px 16px; }
+.ranking-rule-strip > div + div { border-left: 1px solid var(--color-border); }
+.ranking-rule-strip strong { color: var(--color-ink-900); font-size: 14px; }
+.ranking-rule-strip span { color: var(--color-ink-600); font-size: 12px; }
+
+@media (max-width: 767px) {
+  .talent-profile-overview { padding: 18px; }
+  .talent-profile-hero .ant-avatar { width: 72px; height: 72px; font-size: 26px; }
+  .talent-profile-stats { grid-template-columns: 1fr; }
+  .talent-profile-portfolio .ant-image { width: calc(33.333% - 8px); }
+  .talent-onboarding-steps { padding: 14px; }
+  .talent-onboarding-steps.ant-steps-horizontal { display: grid; gap: 14px; }
+  .talent-onboarding-steps .ant-steps-item { flex: none; min-height: 52px; }
+  .talent-onboarding-steps .ant-steps-item-tail { display: none; }
+  .talent-form-section { padding-bottom: 18px; }
+  .talent-form-section + .talent-form-section { padding-top: 18px; }
+  .ranking-rule-strip { grid-template-columns: 1fr; }
+  .ranking-rule-strip > div + div { border-left: 0; border-top: 1px solid var(--color-border); }
+  .ranking-stats { text-align: left; }
+}

@@ -25,8 +25,8 @@ function SubmittedMedia({ urls }: { urls: string[] }) {
   return <Image.PreviewGroup items={imageUrls}>
     <Space wrap>
       {urls.map((url) => isVideo(url)
-        ? <video key={url} src={url} controls preload="metadata" style={{ width: 88, height: 88, objectFit: "cover", background: "#172026" }} />
-        : <Image key={url} width={88} height={88} style={{ objectFit: "cover" }} src={url} />)}
+        ? <video key={url} src={url} controls preload="metadata" className="order-media-thumb" />
+        : <Image key={url} className="order-media-thumb" src={url} />)}
     </Space>
   </Image.PreviewGroup>;
 }
@@ -104,7 +104,7 @@ export function OrderDetailPage({ role, orderId }: { role: UserRole; orderId: nu
           { key: "ship", label: "寄样物流", children: order.ship_to_model_tracking_no ? `${order.ship_to_model_company} ${order.ship_to_model_tracking_no}` : "-" },
           { key: "return", label: "回寄物流", children: order.return_tracking_no ? `${order.return_company} ${order.return_tracking_no}` : "-" },
         ]} /></>}
-        {order.owned_product_images?.length ? <><Divider /><Typography.Text strong>达人提交的同款实拍图</Typography.Text><Image.PreviewGroup items={order.owned_product_images}><Space wrap>{order.owned_product_images.map((url) => <Image key={url} width={88} height={88} style={{ objectFit: "cover" }} src={url} />)}</Space></Image.PreviewGroup></> : null}
+        {order.owned_product_images?.length ? <><Divider /><Typography.Text strong>达人提交的同款实拍图</Typography.Text><Image.PreviewGroup items={order.owned_product_images}><Space wrap>{order.owned_product_images.map((url) => <Image key={url} className="order-media-thumb" src={url} />)}</Space></Image.PreviewGroup></> : null}
         {mediaUrls.length > 0 && <><Divider /><SubmittedMedia urls={mediaUrls} /></>}
         <Divider />
         <Space wrap>

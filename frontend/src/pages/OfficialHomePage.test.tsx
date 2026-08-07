@@ -18,12 +18,24 @@ describe("OfficialHomePage", () => {
     mocks.navigateCurrentWindow.mockReset();
   });
 
-  it("presents the platform proposition and both primary paths", () => {
+  it("presents the brand as the first heading with both primary paths", () => {
     render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
 
-    expect(screen.getByRole("heading", { name: /把每一次寄拍，\s*交给清晰的流程/ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "蓝鹰寄拍" })).toBeVisible();
     expect(screen.getByRole("link", { name: "我是达人" })).toHaveAttribute("href", "/talent/register");
     expect(screen.getByRole("link", { name: "发布寄拍" })).toHaveAttribute("href", "/login");
+  });
+
+  it("serves every visual from local brand assets without runtime remote URLs", () => {
+    render(<MemoryRouter><OfficialHomePage /></MemoryRouter>);
+
+    const sources = [...document.querySelectorAll("img")].map((img) => img.getAttribute("src") ?? "");
+    expect(sources.length).toBeGreaterThanOrEqual(4);
+    for (const source of sources) {
+      expect(source).toMatch(/^\/images\/brand\//);
+      expect(source).not.toContain("unsplash.com");
+    }
+    expect(document.querySelector(".official-page")?.innerHTML).not.toContain("transparenttextures.com");
   });
 
   it("opens the mobile navigation and switches FAQ answers", () => {

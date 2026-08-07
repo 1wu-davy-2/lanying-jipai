@@ -1,0 +1,51 @@
+/* 管理端订单运营：运营发单、接单申请、订单监控、争议处理 */
+.filter-bar { margin-bottom: 18px; }
+.filter-bar .ant-input-affix-wrapper, .filter-bar .ant-input-search { min-width: 210px; }
+.filter-bar .ant-select, .filter-bar .ant-btn, .filter-bar .ant-input-affix-wrapper { min-height: 40px; }
+.admin-merchant-select { min-width: 280px; }
+.admin-application-groups { display: grid; gap: 14px; }
+.admin-application-group { border-color: var(--color-border); }
+.admin-application-group .ant-card-head { border-color: var(--color-border); }
+.admin-application-group .ant-list-item { align-items: flex-start; gap: 12px; }
+.admin-application-group .ant-list-item-meta { min-width: 210px; }
+.admin-application-message { max-width: 360px; color: var(--color-ink-900); font-size: 13px; overflow-wrap: anywhere; }
+.admin-publish-modal .ant-modal-body { max-height: 70vh; overflow-y: auto; }
+.admin-dispute-section + .admin-dispute-section { margin-top: 24px; }
+.admin-dispute-section h4.ant-typography { margin: 0 0 10px; }
+
+/* 手机摘要卡（桌面表格保留，不压缩宽表格） */
+.admin-mobile-orders, .admin-mobile-disputes { display: none; }
+.admin-mobile-order {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-900);
+  text-align: left;
+}
+.admin-mobile-order:active { border-color: var(--color-brand-600); background: var(--color-brand-050); }
+.admin-mobile-order-heading, .admin-mobile-order-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-mobile-order-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-mobile-order-number { color: var(--color-ink-600); font-size: 12px; }
+.admin-mobile-order-footer { color: var(--color-ink-600); font-size: 13px; }
+.admin-mobile-order-footer b { color: var(--color-money-700); font-variant-numeric: tabular-nums; }
+.admin-mobile-dispute { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.admin-mobile-dispute-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-mobile-dispute-heading strong { min-width: 0; overflow: hidden; color: var(--color-ink-900); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-mobile-dispute-reason { color: var(--color-ink-600); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.admin-mobile-dispute-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-mobile-dispute-footer b { color: var(--color-money-700); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767px) {
+  .admin-application-group .ant-card-extra { display: none; }
+  .admin-application-group .ant-list-item { flex-wrap: wrap; }
+  .admin-application-group .ant-list-item-action { width: 100%; margin-left: 0; text-align: right; }
+  .admin-application-message { flex-basis: 100%; padding-left: 54px; }
+  .admin-mobile-orders { display: grid; gap: 10px; }
+  .admin-orders-panels > .ant-table-wrapper { display: none; }
+  .admin-mobile-disputes { display: grid; gap: 10px; }
+  .admin-dispute-section > .ant-table-wrapper { display: none; }
+}

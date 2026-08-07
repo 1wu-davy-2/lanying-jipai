@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   AndroidOutlined,
   ArrowRightOutlined,
+  ArrowUpOutlined,
   CheckOutlined,
   CloseOutlined,
   DownOutlined,
@@ -12,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 
 import { getLatestAndroidRelease } from "../api/appReleases";
+import { AppLogo } from "../components/AppLogo";
 import { navigateCurrentWindow } from "../utils/navigation";
 
 const highlights = [
@@ -19,19 +21,16 @@ const highlights = [
     number: "01",
     title: "真实需求，清楚再接",
     description: "订单把样品、拍摄要求、佣金和交付时间写在前面。看明白，再决定。",
-    tone: "sage",
   },
   {
     number: "02",
     title: "把拍摄放进日常",
     description: "商家寄样到家。用一张干净的桌面、一段自己的时间，完成每次交付。",
-    tone: "terracotta",
   },
   {
     number: "03",
     title: "每一步都有记录",
     description: "从申请、寄送到素材验收，关键动作都在平台里完成，协作有据可查。",
-    tone: "ink",
   },
 ];
 
@@ -42,8 +41,8 @@ const services = [
     title: "给每一件样品，找合适的镜头",
     description: "创建订单、描述拍摄任务、寄出样品，再在同一条流程里查看交付与验收。让商品内容的协作回到清晰、可追溯的节奏。",
     items: ["按品类发布寄拍需求", "查看达人申请与交付", "在订单内完成验收"],
-    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=85",
-    alt: "服装寄拍素材",
+    image: "/images/brand/home-process-placeholder.svg",
+    alt: "寄拍样品与拍摄设备占位图",
   },
   {
     number: "02",
@@ -51,8 +50,8 @@ const services = [
     title: "让认真拍摄，成为可持续的日常",
     description: "从完善资料、浏览订单，到收样、拍摄、上传和寄回，每一步都有明确的下一步。你决定接什么单，也决定自己的节奏。",
     items: ["查看适合自己的订单", "按要求上传拍摄素材", "验收后在平台申请提现"],
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=85",
-    alt: "使用手机处理寄拍订单",
+    image: "/images/brand/home-process-placeholder.svg",
+    alt: "居家创作者整理商品并准备拍摄占位图",
   },
   {
     number: "03",
@@ -60,8 +59,8 @@ const services = [
     title: "把协作放在看得见的地方",
     description: "管理端承接商家、订单、争议与提现审核。需要人工介入的节点被沉淀下来，让运营判断有完整上下文。",
     items: ["统一查看订单进度", "处理审核与争议", "保留操作与结算记录"],
-    image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=85",
-    alt: "井然有序的团队协作空间",
+    image: "/images/brand/home-process-placeholder.svg",
+    alt: "寄拍协作流程占位图",
   },
 ];
 
@@ -87,10 +86,6 @@ const faqs = [
     answer: "请先在订单内保留说明与记录。平台管理端提供订单监控和争议处理，用于跟进需要人工介入的协作节点。",
   },
 ];
-
-function BrandMark() {
-  return <span className="official-brand-mark" aria-hidden="true"><i /><i /><i /></span>;
-}
 
 export function OfficialHomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -120,8 +115,7 @@ export function OfficialHomePage() {
   return <main className="official-page">
     <header className="official-header">
       <a className="official-brand" href="#top" aria-label="蓝鹰寄拍首页">
-        <BrandMark />
-        <span>蓝鹰寄拍</span>
+        <AppLogo variant="full" />
       </a>
       <nav className="official-nav" aria-label="主导航">
         <a href="#features">平台特色</a>
@@ -149,9 +143,12 @@ export function OfficialHomePage() {
     </div>}
 
     <section className="official-hero" id="top">
-      <div className="official-hero-copy official-reveal">
-        <p className="official-eyebrow"><span /> LANYING JIPAI / 寄拍协作平台</p>
-        <h1>把每一次寄拍，<em>交给清晰的流程</em></h1>
+      <div className="official-hero-media">
+        <img src="/images/brand/home-hero-placeholder.svg" alt="" />
+      </div>
+      <div className="official-hero-scrim" aria-hidden="true" />
+      <div className="official-hero-copy">
+        <h1>蓝鹰寄拍</h1>
         <p className="official-hero-intro">商家寄出真实样品，达人按要求完成拍摄。订单、交付、验收与结算，都留在同一个值得信任的地方。</p>
         <div className="official-hero-actions">
           <Link className="official-button official-button-primary" to="/talent/register">我是达人 <ArrowRightOutlined aria-hidden /></Link>
@@ -159,35 +156,16 @@ export function OfficialHomePage() {
         </div>
         <p className="official-hero-note"><CheckOutlined aria-hidden /> 先看要求，再决定是否接单</p>
       </div>
-      <div className="official-hero-art official-reveal official-reveal-delay">
-        <span className="official-orbit official-orbit-one" aria-hidden="true" />
-        <span className="official-orbit official-orbit-two" aria-hidden="true" />
-        <span className="official-leaf official-leaf-one" aria-hidden="true" />
-        <span className="official-leaf official-leaf-two" aria-hidden="true" />
-        <div className="official-hero-arch">
-          <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85" alt="居家整理服饰准备寄拍" />
-        </div>
-        <div className="official-hero-inset">
-          <img src="https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=600&q=85" alt="服装拍摄细节" />
-        </div>
-        <div className="official-hero-ticket">
-          <span>寄拍进行中</span>
-          <strong>样品 → 拍摄 → 交付</strong>
-          <i />
-        </div>
-      </div>
     </section>
 
     <section className="official-feature-section" id="features">
       <div className="official-section-heading">
-        <p className="official-eyebrow"><span /> PLATFORM NOTES</p>
-        <h2>一件样品的旅程，<em>应该被好好安排</em></h2>
+        <h2>一件样品的旅程，应该被好好安排</h2>
         <p>不靠模糊口头约定，也不把关键步骤散落在对话里。蓝鹰寄拍为真实协作留出清晰的位置。</p>
       </div>
       <div className="official-feature-grid">
-        {highlights.map((item, index) => <article className={`official-feature-card official-feature-card-${item.tone} official-reveal official-reveal-delay-${index + 1}`} key={item.number}>
+        {highlights.map((item) => <article className="official-feature-card" key={item.number}>
           <span className="official-feature-number">{item.number}</span>
-          <div className="official-feature-sprout" aria-hidden="true"><i /><i /></div>
           <h3>{item.title}</h3>
           <p>{item.description}</p>
           <a href="#how-it-works" aria-label={`了解${item.title}`}><ArrowRightOutlined aria-hidden /></a>
@@ -196,10 +174,6 @@ export function OfficialHomePage() {
     </section>
 
     <section className="official-stats" aria-label="平台协作数据">
-      <div className="official-stats-intro">
-        <p className="official-eyebrow"><span /> IN ONE PLACE</p>
-        <p>少一点来回确认，把注意力留给商品与内容本身。</p>
-      </div>
       <dl className="official-stat-list">
         <div><dt>03</dt><dd>商家、达人、运营<br />在同一流程协作</dd></div>
         <div><dt>07</dt><dd>从发单到结算<br />关键节点清晰可见</dd></div>
@@ -209,8 +183,7 @@ export function OfficialHomePage() {
 
     <section className="official-downloads" id="downloads" aria-labelledby="official-downloads-heading">
       <div className="official-downloads-copy">
-        <p className="official-eyebrow"><span /> STAY CLOSE</p>
-        <h2 id="official-downloads-heading">把寄拍协作，<em>带在身边</em></h2>
+        <h2 id="official-downloads-heading">把寄拍协作，带在身边</h2>
         <p>Android App 和微信小程序正在准备中。等它们就绪后，订单进展与协作消息也能随时查看。</p>
       </div>
       <div className="official-download-options">
@@ -229,14 +202,13 @@ export function OfficialHomePage() {
 
     <section className="official-process" id="how-it-works">
       <div className="official-process-heading">
-        <p className="official-eyebrow"><span /> DESIGNED FOR COLLABORATION</p>
-        <h2>每一端，都有恰好的<em>下一步</em></h2>
+        <h2>每一端，都有恰好的下一步</h2>
       </div>
       <div className="official-service-list">
         {services.map((service, index) => <article className={`official-service official-service-${index + 1}`} key={service.number}>
           <div className="official-service-visual">
             <span className="official-service-number">{service.number}</span>
-            <div className="official-service-arch"><img src={service.image} alt={service.alt} /></div>
+            <div className="official-service-image"><img src={service.image} alt={service.alt} /></div>
             {index === 1 && <span className="official-service-stamp">按要求<br />完成交付</span>}
           </div>
           <div className="official-service-copy">
@@ -253,8 +225,7 @@ export function OfficialHomePage() {
 
     <section className="official-faq" id="faq">
       <div className="official-faq-aside">
-        <p className="official-eyebrow"><span /> FAQ</p>
-        <h2>清楚的回答，<em>让开始更轻松</em></h2>
+        <h2>清楚的回答，让开始更轻松</h2>
         <p>关于平台协作、订单交付和结算流程，先把重要的事讲在前面。</p>
         <a href="#contact">还有问题？查看联系入口 <ArrowRightOutlined aria-hidden /></a>
       </div>
@@ -274,7 +245,7 @@ export function OfficialHomePage() {
     <footer className="official-footer" id="contact">
       <div className="official-footer-top">
         <div className="official-footer-brand">
-          <a className="official-brand" href="#top"><BrandMark /><span>蓝鹰寄拍</span></a>
+          <a className="official-brand" href="#top"><AppLogo variant="full" /></a>
           <p>让真实商品与认真拍摄，在更清楚的流程里相遇。</p>
           <span className="official-footer-quote">“把每一次交付，都放在看得见的地方。”</span>
         </div>
@@ -297,7 +268,7 @@ export function OfficialHomePage() {
           <Link to="/entry">进入工作台 <ArrowRightOutlined aria-hidden /></Link>
         </div>
       </div>
-      <div className="official-footer-bottom"><span>© 2026 蓝鹰寄拍</span><span>寄拍协作平台</span><a href="#top">回到顶部 ↑</a></div>
+      <div className="official-footer-bottom"><span>© 2026 蓝鹰寄拍</span><span>寄拍协作平台</span><a href="#top">回到顶部 <ArrowUpOutlined aria-hidden /></a></div>
     </footer>
     {developmentNotice && <div className="official-development-notice" role="status" aria-live="polite">{developmentNotice}</div>}
   </main>;

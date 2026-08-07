@@ -1,0 +1,210 @@
+/* 达人大厅与申请详情：/model/hall、/model/hall/:id */
+.talent-hall { max-width: 1180px; margin: 0 auto; }
+.talent-hall-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.talent-hall-heading h2.ant-typography { margin: 3px 0 5px; color: var(--color-ink-900); font-size: 28px; line-height: 36px; }
+.talent-page-kicker { display: block; color: var(--color-brand-600); font-size: 13px; font-weight: 700; }
+.talent-hall-count {
+  display: grid;
+  min-width: 100px;
+  gap: 1px;
+  padding-left: 18px;
+  border-left: 1px solid var(--color-border);
+  text-align: right;
+}
+.talent-hall-count strong { color: var(--color-ink-900); font-size: 24px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.talent-hall-count span { color: var(--color-ink-600); font-size: 12px; }
+
+/* 资格状态条：高度稳定，可申请翡翠弱背景 / 不可申请金色弱背景 */
+.talent-claim-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.talent-claim-strip--ok { background: var(--color-trust-050); border-color: rgba(38, 117, 111, .35); }
+.talent-claim-strip--warn { background: var(--color-money-050); border-color: rgba(152, 75, 12, .35); }
+.talent-claim-icon { font-size: 20px; }
+.talent-claim-strip--ok .talent-claim-icon { color: var(--color-trust-600); }
+.talent-claim-strip--warn .talent-claim-icon { color: var(--color-warning-700); }
+.talent-claim-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.talent-claim-copy strong { color: var(--color-ink-900); font-size: 14px; font-weight: 650; }
+.talent-claim-copy span { color: var(--color-ink-600); font-size: 13px; line-height: 1.5; }
+.talent-claim-strip .ant-btn { flex: 0 0 auto; min-height: 36px; }
+
+.hall-category-filter { overflow-x: auto; margin: 0 -2px 24px; padding: 2px; }
+.hall-category-filter .ant-segmented { min-width: max-content; }
+
+/* 订单卡：桌面三列、1024 两列、手机单列摘要结构 */
+.talent-order-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.talent-order-item, .talent-order-skeleton {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.talent-order-item { display: flex; min-height: 100%; flex-direction: column; transition: box-shadow .16s ease; }
+.talent-order-item:hover { box-shadow: var(--shadow-float); }
+.talent-order-media { aspect-ratio: 16 / 10; overflow: hidden; background: var(--color-brand-050); }
+.talent-order-media .ant-image, .talent-order-media img { display: block; width: 100%; height: 100%; }
+.talent-order-media img { object-fit: cover; }
+.talent-order-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-content: center;
+  gap: 10px;
+  color: var(--color-brand-700);
+  text-align: center;
+  font-weight: 600;
+}
+.talent-order-placeholder .anticon { font-size: 30px; }
+.talent-order-body { display: grid; gap: 10px; padding: 16px 16px 0; }
+.talent-order-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.talent-order-commission { display: grid; flex: 0 0 auto; gap: 2px; text-align: right; }
+.talent-order-commission span { color: var(--color-ink-600); font-size: 11px; }
+.talent-order-commission strong { color: var(--color-money-700); font-size: 19px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.talent-order-commission small { color: var(--color-ink-600); font-size: 11px; white-space: nowrap; }
+.talent-order-body h4.ant-typography { margin: 0; }
+.talent-order-description { min-height: 44px; margin: 0 !important; color: var(--color-ink-600); }
+.talent-order-footer { display: grid; gap: 10px; padding: 12px 16px 16px; margin-top: auto; }
+.talent-order-facts { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--color-ink-600); font-size: 12px; }
+.talent-order-facts span::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 5px 2px 0;
+  border-radius: 50%;
+  background: var(--color-trust-600);
+}
+.talent-order-subsidy {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-money-050);
+  color: var(--color-money-700);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.talent-order-requirement { display: grid; gap: 4px; min-height: 40px; padding: 9px 10px; background: var(--color-canvas); color: var(--color-ink-600); font-size: 12px; }
+.talent-order-requirement > span { color: var(--color-ink-900); font-weight: 600; }
+.talent-order-skeleton { min-height: 344px; padding: 18px; }
+.talent-hall-pagination { display: flex; justify-content: center; margin-top: 24px; }
+
+/* 大厅详情 */
+.marketplace-detail { max-width: 1120px; margin: 0 auto; }
+.marketplace-back { margin: 0 0 16px -8px; min-width: 44px; min-height: 44px; }
+.marketplace-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--color-border);
+}
+.marketplace-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-content: start; }
+.marketplace-gallery .ant-image { display: block; width: 100%; aspect-ratio: 1; overflow: hidden; background: var(--color-brand-050); }
+.marketplace-gallery .ant-image:first-child { grid-column: span 4; aspect-ratio: 4 / 3; }
+.marketplace-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.marketplace-empty-media {
+  display: grid;
+  grid-column: span 4;
+  aspect-ratio: 4 / 3;
+  place-content: center;
+  gap: 10px;
+  background: var(--color-brand-050);
+  color: var(--color-brand-700);
+}
+.marketplace-empty-media .anticon { margin: 0 auto; font-size: 32px; }
+.marketplace-summary { display: grid; align-content: start; gap: 14px; }
+.marketplace-summary h2.ant-typography { margin: 0; color: var(--color-ink-900); }
+.marketplace-reward {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.marketplace-reward h4.ant-typography { margin: 0 0 2px; color: var(--color-ink-600); font-size: 14px; font-weight: 500; }
+.marketplace-reward > strong { color: var(--color-money-700); font-size: 30px; font-variant-numeric: tabular-nums; }
+.marketplace-reward-note { color: var(--color-ink-600); font-size: 13px; }
+.marketplace-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-top: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+}
+.marketplace-spec-grid div {
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  padding: 12px;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.marketplace-spec-grid span { color: var(--color-ink-600); font-size: 12px; }
+.marketplace-spec-grid strong { color: var(--color-ink-900); font-size: 15px; }
+.marketplace-summary .ant-alert { margin: 0; }
+.marketplace-action-bar { display: grid; gap: 8px; margin-top: 12px; }
+.marketplace-information { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 36px; padding: 32px 0; }
+.marketplace-information-main { display: grid; gap: 28px; }
+.marketplace-information h4.ant-typography { margin: 0 0 10px; color: var(--color-ink-900); }
+.marketplace-information-section + .marketplace-information-section { padding-top: 24px; border-top: 1px solid var(--color-border); }
+.marketplace-requirements {
+  margin-bottom: 0 !important;
+  padding: 14px;
+  background: var(--color-canvas);
+  color: var(--color-ink-900);
+  white-space: pre-wrap;
+}
+.marketplace-information-aside { display: grid; align-content: start; gap: 16px; }
+.marketplace-rules { padding: 18px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.marketplace-commitments { display: grid; gap: 10px; margin: 0; color: var(--color-ink-600); font-size: 13px; }
+.marketplace-commitments .anticon { color: var(--color-trust-600); margin-right: 5px; }
+.marketplace-merchant {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 18px;
+  border-left: 3px solid var(--color-brand-600);
+  background: var(--color-canvas);
+}
+.marketplace-merchant > .anticon { color: var(--color-brand-600); font-size: 22px; }
+.marketplace-merchant h5.ant-typography { margin: 2px 0; }
+
+@media (max-width: 1024px) {
+  .talent-order-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767px) {
+  .talent-hall-heading { margin-bottom: 14px; }
+  .talent-hall-heading h2.ant-typography { font-size: 24px; line-height: 32px; }
+  .hall-category-filter { margin-bottom: 16px; }
+  .talent-claim-strip { flex-wrap: wrap; }
+  .talent-order-grid { grid-template-columns: 1fr; gap: 12px; }
+  .talent-order-item { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 0 12px; }
+  .talent-order-media { grid-column: 1; grid-row: 1; width: 104px; height: 104px; aspect-ratio: 1; }
+  .talent-order-body { grid-column: 2; grid-row: 1; padding: 2px 0 0; align-content: start; }
+  .talent-order-footer { grid-column: 1 / -1; grid-row: 2; padding: 10px 14px 14px; border-top: 1px solid var(--color-border); }
+  .talent-order-skeleton { min-height: 310px; }
+  .marketplace-detail-layout, .marketplace-information { grid-template-columns: 1fr; gap: 22px; }
+  .marketplace-detail-layout { padding-bottom: 24px; }
+  .marketplace-summary h2.ant-typography { font-size: 23px; line-height: 31px; }
+  .marketplace-reward > strong { font-size: 26px; }
+  .marketplace-information { padding-top: 24px; }
+  /* 粘性主操作：位于达人底部导航之上，仅一层固定操作 */
+  .marketplace-action-bar { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom) + 8px); z-index: 5; }
+  .marketplace-apply-modal { max-width: calc(100vw - 24px); }
+}

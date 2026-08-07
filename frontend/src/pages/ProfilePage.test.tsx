@@ -81,4 +81,45 @@ describe("ProfilePage", () => {
     expect(diagnostics).not.toContain("labelStyle");
     expect(diagnostics).not.toContain("useForm");
   });
+
+  it("explains the purpose of each verification field", async () => {
+    mocks.getCurrentUser.mockResolvedValue({ ...(await mocks.getCurrentUser()), verify_status: "unverified" });
+    renderPage();
+
+    expect(await screen.findByText("仅用于实名认证与结算核对")).toBeVisible();
+    expect(screen.getByText("仅用于实名认证，审核后按权限脱敏显示")).toBeVisible();
+    expect(screen.getByText("仅用于提现结算")).toBeVisible();
+  });
+
+  it("shows the pending verification state with a single review entry", async () => {
+    mocks.getCurrentUser.mockResolvedValue({ ...(await mocks.getCurrentUser()), verify_status: "pending" });
+    renderPage();
+
+    expect(await screen.findByText("实名认证审核中")).toBeVisible();
+    expect(screen.getByText("审核通过后即可正式接单。")).toBeVisible();
+  });
+
+  it("shows the rejected verification state with the full reason and a resubmit form", async () => {
+    mocks.getCurrentUser.mockResolvedValue({ ...(await mocks.getCurrentUser()), verify_status: "rejected", verify_reject_reason: "身份证照片不清晰，请重新提交清晰版本" });
+    renderPage();
+
+    expect(await screen.findByText("认证被驳回")).toBeVisible();
+    expect(screen.getByText("身份证照片不清晰，请重新提交清晰版本")).toBeVisible();
+    expect(screen.getByRole("button", { name: "提交认证" })).toBeVisible();
+  });
+
+  it("renders the merchant profile branch with the same verification fields", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mocks.getCurrentUser.mockResolvedValue({ id: 1, phone: "13000000001", role: "merchant", nickname: "夏日服饰", verify_status: "unverified" });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter><ProfilePage role="merchant" /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "店铺资料" })).toBeVisible();
+    expect(await screen.findByLabelText("店铺名称")).toBeVisible();
+    expect(screen.getByText("仅用于提现结算")).toBeVisible();
+    expect(screen.queryByText("接单能力")).not.toBeInTheDocument();
+  });
 });

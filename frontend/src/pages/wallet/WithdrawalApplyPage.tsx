@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Skeleton, Typography, message } from "antd";
+import { Alert, Button, Card, Form, Input, InputNumber, Skeleton, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 
 import { getCurrentUser } from "../../api/users";
@@ -28,12 +28,14 @@ export function WithdrawalApplyPage() {
   if (wallet.isLoading || user.isLoading) return <Skeleton active />;
   const available = Number(wallet.data?.available_balance ?? 0);
   return <div className="narrow-page">
-    <div className="page-heading"><Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回钱包" onClick={() => navigate("/model/wallet")} /><Typography.Title level={2}>申请提现</Typography.Title></div>
+    <div className="page-heading wallet-back-heading"><Button className="wallet-back" type="text" icon={<ArrowLeftOutlined />} aria-label="返回钱包" onClick={() => navigate("/model/wallet")} /><Typography.Title level={2}>申请提现</Typography.Title></div>
+    {wallet.isError && <Alert type="error" showIcon message="余额加载失败" description="请稍后重试，提交前请确认可提现余额。" action={<Button size="small" onClick={() => wallet.refetch()}>重新加载</Button>} />}
     <Card className="content-card"><div className="withdrawal-balance">可提现余额 <strong>¥{available.toFixed(2)}</strong></div>
       <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
-        <Form.Item name="amount" label="提现金额" rules={[{ required: true, message: "请输入提现金额" }]}><InputNumber min={0.01} max={available} precision={2} prefix="¥" className="field-full" /></Form.Item>
-        <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入收款支付宝账号" }]}><Input /></Form.Item>
-        <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
+        <Form.Item name="amount" label="提现金额" extra={available > 0 ? `不能超过可提现余额 ¥${available.toFixed(2)}` : "当前无可提现余额"} rules={[{ required: true, message: "请输入提现金额" }]}><InputNumber min={0.01} max={available} precision={2} prefix="¥" className="field-full" /></Form.Item>
+        <Form.Item name="alipay_account" label="收款支付宝账号" rules={[{ required: true, message: "请输入收款支付宝账号" }]}><Input maxLength={100} /></Form.Item>
+        <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input maxLength={50} /></Form.Item>
+        <Typography.Paragraph type="secondary">支付宝账号为本次提现的收款账户快照，提交后不会修改你的个人资料。</Typography.Paragraph>
         <Button type="primary" htmlType="submit" loading={saving} disabled={available <= 0}>提交申请</Button>
       </Form>
     </Card>

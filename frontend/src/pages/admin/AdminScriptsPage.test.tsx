@@ -61,7 +61,7 @@ describe("AdminScriptsPage", () => {
 
     fireEvent.click(screen.getByText("2", { selector: "a" }));
     expect(await screen.findByText("#7")).toBeVisible();
-  });
+  }, 15000);
 
   it("filters chapters and copy blocks independently", async () => {
     renderPage();

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FileImageOutlined, SafetyCertificateOutlined, ShopOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Image, Input, Modal, Skeleton, Space, Tag, Typography, message } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { applyForOrder, getHallOrder, productSourceLabels } from "../../api/orders";
 import { OrderMediaUpload } from "../../components/OrderMediaUpload";
@@ -23,7 +23,7 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
   const [applicationMessage, setApplicationMessage] = useState("");
   const [ownedProductImages, setOwnedProductImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const { data: order, isLoading, error } = useQuery({ queryKey: ["hall-order", orderId], queryFn: () => getHallOrder(orderId) });
+  const { data: order, isLoading, error, refetch } = useQuery({ queryKey: ["hall-order", orderId], queryFn: () => getHallOrder(orderId) });
   const { data: talentStatus } = useQuery({ queryKey: ["talent-status"], queryFn: getTalentStatus });
 
   const submit = async () => {
@@ -50,11 +50,13 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
   };
 
   if (isLoading) return <Skeleton active paragraph={{ rows: 12 }} />;
-  if (!order) return <Empty description={error instanceof Error ? error.message : "订单不存在或已结束招募"} />;
+  if (!order) return <Empty description={error instanceof Error ? "订单加载失败，请稍后重试" : "订单不存在或已结束招募"}><Button onClick={() => refetch()}>重新加载</Button></Empty>;
   const pending = order.application_status === "PENDING";
   const rejected = order.application_status === "REJECTED";
   const approved = order.application_status === "APPROVED";
   const blocked = !talentStatus?.can_claim;
+  const totalAmount = (Number(order.commission_amount) + Number(order.product_subsidy_amount)).toFixed(2);
+  const hasSubsidy = order.product_subsidy_amount !== "0.00";
 
   return <section className="marketplace-detail">
     <Button className="marketplace-back" type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate("/model/hall")}>返回大厅</Button>
@@ -66,10 +68,12 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
         </Image.PreviewGroup> : <div className="marketplace-empty-media"><FileImageOutlined /><span>商家暂未上传样图</span></div>}
       </div>
       <div className="marketplace-summary">
-        <Typography.Text className="talent-page-kicker">订单概览</Typography.Text>
         <Space size={[4, 6]} wrap>{order.product_categories.map((item) => <Tag key={item} color={productCategoryColor(item)}>{item}</Tag>)}<Tag>{orderTypeLabels[order.order_type]}</Tag></Space>
         <Typography.Title level={2}>{order.title}</Typography.Title>
-        <div className="marketplace-reward"><Typography.Title level={4}>可获得收益</Typography.Title><strong>¥{(Number(order.commission_amount) + Number(order.product_subsidy_amount)).toFixed(2)}</strong>{order.product_subsidy_amount !== "0.00" && <Typography.Text type="secondary">含商品补贴 ¥{order.product_subsidy_amount}</Typography.Text>}</div>
+        <div className="marketplace-reward">
+          <div><Typography.Title level={4}>可获得收益</Typography.Title><Typography.Text className="marketplace-reward-note">佣金 ¥{Number(order.commission_amount).toFixed(2)}{hasSubsidy ? ` · 补贴 ¥${Number(order.product_subsidy_amount).toFixed(2)}` : ""}</Typography.Text></div>
+          <strong>¥{totalAmount}</strong>
+        </div>
         <div className="marketplace-spec-grid">
           <div><span>商品来源</span><strong>{productSourceLabels[order.product_source]}</strong></div>
           <div><span>商品处理</span><strong>{order.return_required ? "拍后需返货" : "拍完自留"}</strong></div>
@@ -78,9 +82,11 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
         </div>
         {pending && <Alert type="info" showIcon icon={<ClockCircleOutlined />} message="申请已提交" description="运营将结合达人等级、作品和档期审核，审核通过后订单进入待寄样。" />}
         {rejected && <Alert type="warning" showIcon message="本次申请未通过" description={order.application_reason || "可继续浏览其他匹配订单。"} />}
-        {approved && <Alert type="success" showIcon message="申请已通过" description="订单已分配，请到“我的订单”处理寄样与拍摄流程。" />}
-        {(!order.application_status || rejected) && <Button className="marketplace-primary-action" type="primary" size="large" block disabled={blocked} onClick={() => setOpen(true)}>{blocked ? "暂不具备申请资格" : rejected && order.product_source === "talent_owned" ? "补充同款图后重新申请" : "提交接单申请"}</Button>}
-        {blocked && <Typography.Text type="secondary">请先完成资料与实名认证，并满足当前等级的接单限制。</Typography.Text>}
+        {approved && <Alert type="success" showIcon message="申请已通过" description={<>订单已分配，请到<Link to="/model/orders">我的订单</Link>处理寄样与拍摄流程。</>} />}
+        {(!order.application_status || rejected) && <div className="marketplace-action-bar">
+          <Button type="primary" size="large" block disabled={blocked} onClick={() => setOpen(true)}>{blocked ? "暂不具备申请资格" : rejected && order.product_source === "talent_owned" ? "补充同款图后重新申请" : "提交接单申请"}</Button>
+          {blocked && <Typography.Text type="secondary">请先完成资料与实名认证，并满足当前等级的接单限制。</Typography.Text>}
+        </div>}
       </div>
     </div>
     <div className="marketplace-information">
@@ -109,7 +115,7 @@ export function MarketplaceOrderDetailPage({ orderId }: { orderId: number }) {
         </div>
       </aside>
     </div>
-    <Modal title="提交接单申请" open={open} onCancel={() => { setOpen(false); setOwnedProductImages([]); }} onOk={submit} okText="确认申请" confirmLoading={submitting} destroyOnHidden>
+    <Modal className="marketplace-apply-modal" title="提交接单申请" open={open} onCancel={() => { setOpen(false); setOwnedProductImages([]); }} onOk={submit} okText="确认申请" confirmLoading={submitting} destroyOnHidden>
       <Typography.Paragraph type="secondary">运营会根据作品、等级和当前档期审核。{order.product_source === "merchant_ship" ? "申请通过后，商家才会寄出样品。" : order.product_source === "talent_purchase" ? "申请通过后请自行购买商品，验收后补贴与佣金一并结算。" : "申请通过后还需由商家审核同款实拍图。"}</Typography.Paragraph>
       <Input.TextArea value={applicationMessage} onChange={(event) => setApplicationMessage(event.target.value)} rows={4} maxLength={300} showCount placeholder="简要说明你的拍摄方向、档期或相近作品经验（选填）" />
       {order.product_source === "talent_owned" && <div className="owned-product-upload"><Typography.Text strong>同款实拍图</Typography.Text><Typography.Paragraph type="secondary">请上传至少一张本人已有同款商品的清晰实拍图，商家会在分配后审核。</Typography.Paragraph><OrderMediaUpload value={ownedProductImages} onChange={setOwnedProductImages} accept="image" maxCount={6} /></div>}

@@ -1,0 +1,59 @@
+/* 三角色工作台壳层与跨角色共享的页面结构规则 */
+.workspace-shell { min-height: 100vh; }
+.workspace-shell .ant-layout { background: var(--color-canvas); }
+.workspace-sider { background: #24212B !important; padding: 0 12px 12px; }
+.workspace-brand { display: flex; align-items: center; height: 72px; padding: 0 4px 0 8px; color: #fff; }
+.workspace-sider .ant-menu { border-inline-end: 0; background: transparent; }
+.workspace-sider .ant-menu-item { height: 44px; line-height: 44px; margin-block: 4px; border-radius: var(--radius-sm); }
+.workspace-sider .ant-menu-item .anticon { font-size: 19px; }
+.workspace-sider .ant-menu-item-selected { background: var(--color-brand-600) !important; }
+.workspace-sider .ant-menu-item:hover { background: rgba(255, 255, 255, .14) !important; }
+/* 管理端不可点击小标题分组 */
+.workspace-sider .ant-menu-item-group-title { padding: 16px 12px 6px; color: rgba(255, 255, 255, .55); font-size: 12px; line-height: 18px; }
+.workspace-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 32px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.workspace-user { color: var(--color-ink-900); font-weight: 600; }
+.workspace-content { width: 100%; max-width: calc(var(--content-max-width) + 64px); margin: 0 auto; padding: 32px; }
+.workspace-mobile-header, .talent-mobile-nav { display: none; }
+
+/* 达人壳层的旧设计变量仅供各页面模块回退使用，壳层颜色一律使用品牌令牌 */
+.talent-workspace-shell {
+  --talent-deep: #14373a;
+  --talent-primary: #117a72;
+  --talent-soft: #dcece8;
+  --talent-canvas: #f5f8f8;
+  --talent-ink: #17272a;
+  --talent-muted: #617174;
+  --talent-money: #c4531b;
+  --talent-border: #d9e6e4;
+  color: var(--color-ink-900);
+  background: var(--color-canvas);
+}
+.talent-workspace-shell .ant-layout { background: var(--color-canvas); }
+
+/* 共享页面结构 */
+.page-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.page-heading h2.ant-typography { margin: 0; }
+.content-card { border-color: var(--color-border); box-shadow: none; }
+.field-full { width: 100%; }
+.order-card { height: 100%; border-color: var(--color-border); }
+.order-card p { min-height: 48px; color: var(--color-ink-600); }
+.table-row-link { cursor: pointer; }
+.table-row-link:hover > td { background: var(--color-brand-050) !important; }
+.muted-text { color: var(--color-ink-600); font-size: 13px; margin-top: 4px; }
+.message-board { margin-top: 18px; }
+.message-board .ant-list-item { align-items: flex-start; }
+.message-composer { width: 100%; margin-top: 14px; }
+.section-card { margin-top: 18px; }
+.amount-positive { color: var(--color-trust-600); font-weight: 600; }
+.amount-negative { color: var(--color-money-700); font-weight: 600; }
+/* 上传组件预览：稳定铺满容器，不依赖内联尺寸 */
+.order-media-preview { display: block; width: 100%; max-width: 100%; }

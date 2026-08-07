@@ -1,0 +1,47 @@
+/* 全局基础规则：字体、盒模型、图片、焦点、动效偏好、数字等宽与可访问性隐藏类 */
+:root {
+  font-family: var(--font-sans);
+  color: #172026;
+  background: #f4f6f5;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; }
+
+/* 稳定画布高度，360px 下不因 body/#root 产生水平滚动 */
+#root { min-height: 100vh; }
+
+img { max-width: 100%; }
+
+/* 键盘焦点可见，不以 hover 作为唯一反馈 */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+/* 金额与数字使用等宽数字特性，列表扫读不跳动 */
+.ant-table, .ant-statistic-content {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 仅供读屏器识别的隐藏元素 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

@@ -94,4 +94,20 @@ describe("ModelOrdersPage", () => {
     expect(await screen.findByText("下一步")).toBeVisible();
     expect(screen.getByText("提交推广内容")).toBeVisible();
   });
+
+  it("distinguishes an interface error from an empty list and offers reload", async () => {
+    mocks.getMyOrders.mockRejectedValueOnce(new Error("网络异常"));
+    renderPage();
+
+    expect(await screen.findByText("订单加载失败，请稍后重试")).toBeVisible();
+    expect(screen.queryByText("暂无符合当前状态的订单")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新加载" })).toBeVisible();
+  });
+
+  it("shows the empty message for the current status filter", async () => {
+    mocks.getMyOrders.mockResolvedValueOnce({ items: [], total: 0 });
+    renderPage();
+
+    expect(await screen.findByText("暂无符合当前状态的订单")).toBeVisible();
+  });
 });

@@ -1,0 +1,97 @@
+/* 商家订单列表、发布弹层与多人履约工作台 */
+.merchant-order-fulfillment-filter { margin: 0 0 14px; }
+.merchant-order-progress { display: grid; gap: 4px; min-width: 132px; }
+.merchant-order-progress strong { color: var(--color-trust-600); font-variant-numeric: tabular-nums; }
+.merchant-order-progress .ant-badge { display: block; margin-right: 8px; font-size: 12px; }
+.merchant-workspace-heading { align-items: center; }
+.merchant-workspace-heading > div { min-width: 0; flex: 1; }
+.merchant-workspace-heading h2.ant-typography { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.merchant-workspace-heading .ant-btn { min-width: 44px; min-height: 44px; }
+.workspace-overview-card { margin-bottom: 18px; border: 1px solid var(--color-border); background: var(--color-surface); }
+.workspace-progress-line { display: flex; align-items: center; gap: 14px; margin: 7px 0 4px; }
+.workspace-progress-line strong { color: var(--color-trust-600); font-size: 24px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.workspace-progress-line .ant-progress { flex: 1; }
+.workspace-filter-bar { margin: 0 0 16px; }
+.fulfillment-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.fulfillment-card { border-color: var(--color-border); }
+.fulfillment-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.fulfillment-card-facts { display: flex; flex-wrap: wrap; gap: 7px 12px; margin-bottom: 13px; color: var(--color-ink-600); font-size: 12px; }
+.fulfillment-card-facts span::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 5px 2px 0;
+  border-radius: 50%;
+  background: var(--color-trust-600);
+}
+.fulfillment-card-feedback { margin: 0 0 12px !important; padding: 8px 10px; background: var(--color-money-050); font-size: 12px; }
+.workspace-list-card { border-color: var(--color-border); }
+.workspace-application-message { margin-bottom: 5px; color: var(--color-ink-900); overflow-wrap: anywhere; }
+.fulfillment-drawer-content { display: grid; gap: 14px; }
+.fulfillment-drawer-talent { display: grid; gap: 16px; border-color: var(--color-border); }
+.fulfillment-drawer-talent h4.ant-typography { margin: 0 0 4px; }
+.fulfillment-drawer-section { border-color: var(--color-border); }
+.fulfillment-drawer-section .ant-list-item { align-items: flex-start; flex-wrap: wrap; }
+.fulfillment-drawer-section .ant-list-item.fulfillment-submission-item { display: block; width: 100%; padding: 14px 0; }
+.fulfillment-submission-header { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; min-width: 0; }
+.fulfillment-submission-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.fulfillment-submission-meta { min-width: 0; max-width: 100%; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.fulfillment-submission-body { display: grid; gap: 8px; margin: 10px 0 0; }
+.fulfillment-submission-body .ant-typography { margin: 0; overflow-wrap: anywhere; }
+.fulfillment-submission-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.fulfillment-message-board { border-color: var(--color-border); }
+.fulfillment-message-board .ant-list-item { align-items: flex-start; gap: 12px; }
+.fulfillment-message-board .ant-list-item-meta { min-width: 120px; margin-bottom: 0; }
+.fulfillment-message-content { flex: 1; min-width: 0; margin: 0 !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fulfillment-ship-form { display: grid; gap: 12px; }
+/* 工作台 Drawer 内素材缩略图（4:3 预览） */
+.fulfillment-media-thumb { width: 112px; height: 84px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-ink-900); }
+.publish-number-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.publish-switch-row { display: flex; flex-wrap: wrap; gap: 28px; }
+.publish-switch-row .ant-form-item { min-width: 150px; }
+/* 发布弹层分组：字段名、默认值、校验与 payload 不变 */
+.publish-form-section { padding: 4px 0 22px; }
+.publish-form-section + .publish-form-section { padding-top: 22px; border-top: 1px solid var(--color-border); }
+.publish-form-section-heading { display: grid; gap: 2px; margin-bottom: 14px; }
+.publish-form-section-heading h5.ant-typography { margin: 0; color: var(--color-ink-900); }
+.publish-form-section-heading .ant-typography { font-size: 13px; }
+.merchant-publish-modal .ant-modal-body { max-height: 70vh; overflow-y: auto; }
+
+/* 手机订单摘要卡（桌面表格保留） */
+.merchant-mobile-orders { display: none; }
+.merchant-mobile-order {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-900);
+  text-align: left;
+}
+.merchant-mobile-order:active { border-color: var(--color-brand-600); background: var(--color-brand-050); }
+.merchant-mobile-order-heading, .merchant-mobile-order-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.merchant-mobile-order-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.merchant-mobile-order-number { display: flex; align-items: center; gap: 8px; color: var(--color-ink-600); font-size: 12px; }
+.merchant-mobile-order-progress { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid var(--color-border); color: var(--color-ink-600); font-size: 12px; }
+.merchant-mobile-order-progress strong { color: var(--color-trust-600); font-size: 13px; }
+.merchant-mobile-order-meta { color: var(--color-ink-600); font-size: 13px; }
+.merchant-mobile-order-meta b { color: var(--color-money-700); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 767px) {
+  .merchant-workspace-heading { flex-wrap: wrap; }
+  .merchant-workspace-heading > div { order: 2; flex-basis: calc(100% - 42px); }
+  .merchant-workspace-heading > .ant-tag { order: 3; margin-left: 42px; }
+  .workspace-overview-card .ant-statistic-title { font-size: 12px; }
+  .workspace-overview-card .ant-statistic-content { font-size: 20px; }
+  .fulfillment-card-grid { grid-template-columns: 1fr; }
+  .publish-number-grid { grid-template-columns: 1fr; gap: 0; }
+  .merchant-mobile-orders { display: grid; gap: 10px; }
+  .merchant-mobile-orders + .ant-table-wrapper { display: none; }
+  /* 履约 Drawer：手机全宽减 12px；关闭与操作按钮至少 44px */
+  .merchant-workspace-drawer .ant-drawer-content-wrapper { width: calc(100vw - 12px) !important; }
+  .merchant-workspace-drawer .ant-drawer-close { width: 44px; height: 44px; }
+  .merchant-workspace-drawer .ant-drawer-body .ant-btn { min-width: 44px; min-height: 44px; }
+}

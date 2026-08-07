@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,8 +44,28 @@ describe("AdminDisputesPage", () => {
     renderPage();
 
     expect(await screen.findByText("旧订单争议")).toBeVisible();
-    expect(await screen.findByText("多人履约订单")).toBeVisible();
-    expect(screen.getByText("新履约")).toBeVisible();
+    expect((await screen.findAllByText("多人履约订单")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("新履约").length).toBeGreaterThanOrEqual(1);
     expect(mocks.getFulfillmentDisputes).toHaveBeenCalledWith({ page: 1, page_size: 20 });
+  });
+
+  it("distinguishes the arbitration scope for fulfillment disputes", async () => {
+    renderPage();
+
+    await screen.findByText("返图争议");
+    const mobileItem = screen.getAllByText("多人履约订单").map((el) => el.closest(".admin-mobile-dispute")).find((el): el is HTMLElement => Boolean(el)) as HTMLElement;
+    fireEvent.click(within(mobileItem).getByRole("button", { name: /仲\s*裁/ }));
+    expect(await screen.findByText("本操作只影响名额 2 的单个履约实例。")).toBeInTheDocument();
+    expect(screen.getByText("履约仲裁")).toBeInTheDocument();
+  });
+
+  it("shows the dispute status in Chinese on both desktop and mobile summaries", async () => {
+    renderPage();
+
+    expect((await screen.findAllByText("争议中")).length).toBeGreaterThanOrEqual(1);
+    const mobileItem = screen.getAllByText("多人履约订单").map((el) => el.closest(".admin-mobile-dispute")).find((el): el is HTMLElement => Boolean(el)) as HTMLElement;
+    expect(mobileItem).toHaveTextContent("第 2 个名额");
+    expect(mobileItem).toHaveTextContent("返图争议");
+    expect(mobileItem).toHaveTextContent("¥80.00");
   });
 });

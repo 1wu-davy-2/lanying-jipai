@@ -1,0 +1,78 @@
+/* 认证入口与登录注册：/entry、/login、/admin/login、/talent/login、/talent/register */
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  background: var(--color-canvas);
+}
+.auth-image {
+  position: relative;
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--color-brand-050);
+}
+.auth-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.auth-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(36, 33, 43, .46), rgba(36, 33, 43, .12));
+}
+.auth-image-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  padding: 48px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.auth-image-overlay p {
+  max-width: 300px;
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.45;
+  font-weight: 600;
+  text-shadow: 0 1px 10px rgba(36, 33, 43, .35);
+}
+.auth-panel { display: grid; place-items: center; padding: 48px 32px; }
+.auth-form-wrap { width: min(100%, 400px); }
+.auth-form-wrap h1.ant-typography { margin-bottom: 4px; letter-spacing: 0; font-size: 28px; line-height: 36px; }
+.auth-subtitle { margin-bottom: 32px; color: var(--color-ink-600); font-size: 14px; line-height: 22px; }
+.auth-form-wrap .ant-input,
+.auth-form-wrap .ant-input-affix-wrapper { min-height: 44px; }
+.auth-form-wrap .ant-btn-primary { height: 44px; }
+.auth-switch { margin-top: 24px; text-align: center; color: var(--color-ink-600); }
+.auth-switch a { color: var(--color-brand-600); font-weight: 600; }
+.entry-options { display: grid; gap: 12px; }
+.entry-option.ant-btn {
+  height: auto;
+  min-height: 80px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  text-align: left;
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-900);
+}
+.entry-option.ant-btn:hover { border-color: var(--color-brand-600); color: var(--color-brand-600); background: var(--color-brand-050); }
+.entry-option-icon { font-size: 20px; }
+.entry-option-arrow { font-size: 16px; }
+.entry-option span { display: grid; gap: 5px; }
+.entry-option strong { font-size: 16px; }
+.entry-option small { color: var(--color-ink-600); font-size: 13px; line-height: 1.4; }
+.app-logo { display: inline-flex; align-items: center; gap: 10px; }
+.app-logo-text { font-size: 20px; font-weight: 700; letter-spacing: 0; }
+
+@media (max-width: 760px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-image { min-height: 128px; }
+  .auth-image-overlay { padding: 18px 20px; }
+  .auth-image-overlay p { display: none; }
+  .auth-panel { padding: 16px 20px 40px; align-items: start; }
+  .auth-form-wrap h1.ant-typography { font-size: 24px; line-height: 32px; }
+}

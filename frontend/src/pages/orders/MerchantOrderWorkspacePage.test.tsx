@@ -149,4 +149,34 @@ describe("MerchantOrderWorkspacePage", () => {
     await waitFor(() => expect(mocks.reviewFulfillmentOwnedProduct).toHaveBeenCalledTimes(1));
     resolveReview?.();
   });
+
+  it("sorts fulfillment cards by slot number", async () => {
+    mocks.getOrderWorkspace.mockResolvedValue({
+      ...workspace,
+      fulfillments: [
+        { ...workspace.fulfillments[0], id: 30, slot_no: 2, status: "IN_PROGRESS", submissions: [] },
+        { ...workspace.fulfillments[0], id: 31, slot_no: 1, status: "SUBMITTED", submissions: [] },
+      ],
+    });
+    renderPage();
+
+    const entries = await screen.findAllByText("查看达人履约详情");
+    const slots = entries.map((entry) => {
+      const badge = entry.closest(".fulfillment-card")?.querySelector(".ant-badge-count")?.textContent;
+      return badge;
+    });
+    expect(slots).toEqual(["1", "2"]);
+  });
+
+  it("shows the product source and next action on every fulfillment card", async () => {
+    mocks.getOrderWorkspace.mockResolvedValue({
+      ...workspace,
+      fulfillments: [{ ...workspace.fulfillments[0], status: "SHIPPED_TO_MODEL", submissions: [] }],
+    });
+    renderPage();
+
+    const card = (await screen.findByText("查看达人履约详情")).closest(".fulfillment-card") as HTMLElement;
+    expect(card).toHaveTextContent("Talent-owned product");
+    expect(card).toHaveTextContent("下一步：确认收货");
+  });
 });

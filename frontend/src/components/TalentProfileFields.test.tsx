@@ -27,7 +27,7 @@ describe("PortfolioField", () => {
     expect(screen.getByRole("heading", { name: "接单能力" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "收货信息" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "作品集" })).toBeVisible();
-    expect(screen.getByText("仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。")).toBeVisible();
+    expect(screen.getByText("已上传 0 张。仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。")).toBeVisible();
   });
 
   it("submits every uploaded portfolio URL with the form", async () => {

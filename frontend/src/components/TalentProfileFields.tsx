@@ -101,9 +101,10 @@ export function PortfolioField() {
 }
 
 function PortfolioUploader({ value, onChange }: { value?: string[]; onChange?: (urls: string[]) => void }) {
+  const uploadedCount = value?.length ?? 0;
   return <div>
     <ImageUploader value={value} onChange={onChange} maxCount={12} label="添加作品照片" />
-    <Typography.Text type="secondary">仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。</Typography.Text>
+    <Typography.Text type="secondary">已上传 {uploadedCount} 张。仅支持 JPG、PNG、WEBP，至少 6 张，最多 12 张。</Typography.Text>
   </div>;
 }
 
@@ -144,4 +145,14 @@ export function TalentProfileFields({ includeMeasurements = true }: { includeMea
 
 export function TalentAvatar({ url, nickname }: { url?: string | null; nickname: string }) {
   return <Avatar src={url}>{nickname.slice(0, 1)}</Avatar>;
+}
+
+/** 实名认证字段：资料页与入驻第二步共用；用途说明只复述当前用途，不做绝对保密承诺。 */
+export function VerificationFields() {
+  return <>
+    <Form.Item name="real_name" label="真实姓名" extra="仅用于实名认证与结算核对" rules={[{ required: true, message: "请输入真实姓名" }]}><Input maxLength={50} autoComplete="name" /></Form.Item>
+    <Form.Item name="id_card_no" label="身份证号" extra="仅用于实名认证，审核后按权限脱敏显示" rules={[{ required: true, message: "请输入身份证号" }]}><Input maxLength={18} autoComplete="off" /></Form.Item>
+    <Form.Item name="alipay_account" label="支付宝账号" extra="仅用于提现结算" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input maxLength={100} autoComplete="off" /></Form.Item>
+    <Form.Item name="alipay_real_name" label="支付宝实名" extra="需与支付宝账号实名一致，用于结算核对" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input maxLength={50} /></Form.Item>
+  </>;
 }

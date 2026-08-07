@@ -88,7 +88,7 @@ export function AdminScriptsPage() {
         <List.Item.Meta avatar={<FileTextOutlined className="admin-scripts-file-icon" />} title={<Space wrap><Typography.Text strong>{item.title}</Typography.Text>{item.category.is_restricted && <Tag color="orange">敏感品类</Tag>}</Space>} description={<><div>{item.category.name} · {item.section_count} 个章节 · {item.copy_block_count} 条可复制话术</div><div className="muted-text">{item.source_filename}</div></>} />
       </List.Item>} /> : <Empty description="没有匹配的话术资料" />}
     </>}
-    <Drawer title={detail?.title || "话术资料"} open={selected !== null} onClose={() => setSelected(null)} width={Math.min(1120, window.innerWidth - 24)} destroyOnClose>
+    <Drawer className="admin-scripts-drawer" title={detail?.title || "话术资料"} open={selected !== null} onClose={() => setSelected(null)} width={1120} destroyOnClose>
       {detailLoading || !detail ? <Skeleton active /> : <div className="admin-script-detail">
         <Space wrap><Tag color="cyan">{detail.category.name}</Tag>{detail.category.is_restricted && <Tag color="orange">敏感品类</Tag>}<Typography.Text type="secondary">{detail.section_count} 个章节，{detail.copy_block_count} 条话术</Typography.Text></Space>
         {detail.category.is_restricted && <Alert type="warning" showIcon message="使用前须明确告知拍摄边界并取得自愿确认" />}

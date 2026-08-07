@@ -5,7 +5,12 @@ import { Button, Form, Input, InputNumber, Modal, Select, Space, Switch, Table, 
 import { getAdminUsers, reviewVerification, updateAdminUserStatus, updateMerchantAssurance, type AdminUser } from "../../api/admin";
 
 const roleLabels: Record<string, string> = { merchant: "商家", model: "达人", admin: "管理员" };
-const verifyLabels: Record<string, { label: string; color: string }> = { unverified: { label: "未认证", color: "default" }, pending: { label: "待审核", color: "gold" }, verified: { label: "已认证", color: "green" }, rejected: { label: "已驳回", color: "red" } };
+const verifyLabels: Record<string, { label: string; color: string }> = { unverified: { label: "未认证", color: "default" }, pending: { label: "待审核", color: "gold" }, verified: { label: "已认证", color: "green" }, rejected: { label: "已驳回", color: "error" } };
+const verifyFallback = { label: "状态未知", color: "default" };
+
+function maskPhone(phone: string) {
+  return phone.length >= 7 ? `${phone.slice(0, 3)}****${phone.slice(-4)}` : phone;
+}
 
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -29,14 +34,21 @@ export function AdminUsersPage() {
       setAssuring(null); assuranceForm.resetFields(); await refresh(); message.success("商家保障标签已更新");
     } catch (error) { message.error(error instanceof Error ? error.message : "更新失败"); }
   };
-  return <div><div className="page-heading"><Typography.Title level={2}>用户管理</Typography.Title></div>
+  return <div><div className="page-heading"><div><Typography.Title level={2}>用户管理</Typography.Title><Typography.Text type="secondary">账号、实名认证与商家保障集中管理。</Typography.Text></div></div>
     <Space wrap className="filter-bar"><Select allowClear placeholder="角色" options={Object.entries(roleLabels).map(([value, label]) => ({ value, label }))} onChange={(role) => setFilters((old) => ({ ...old, role }))} /><Select allowClear placeholder="账号状态" options={[{ value: "active", label: "正常" }, { value: "disabled", label: "已禁用" }]} onChange={(status) => setFilters((old) => ({ ...old, status }))} /><Select allowClear placeholder="认证状态" options={Object.entries(verifyLabels).map(([value, item]) => ({ value, label: item.label }))} onChange={(verify_status) => setFilters((old) => ({ ...old, verify_status }))} /><Input.Search allowClear placeholder="手机号或昵称" onSearch={(keyword) => setFilters((old) => ({ ...old, keyword }))} /></Space>
+    <div className="admin-users-mobile">
+      {(data?.items ?? []).map((user) => <div className="admin-users-mobile-card" key={user.id}>
+        <div className="admin-users-mobile-heading"><strong>{user.nickname}</strong><Tag>{roleLabels[user.role] ?? user.role}</Tag></div>
+        <span className="admin-users-mobile-meta">{maskPhone(user.phone)} · {(verifyLabels[user.verify_status] ?? verifyFallback).label} · {user.status === "active" ? "正常" : "已禁用"}</span>
+        <div className="admin-users-mobile-actions"><Space wrap><Button size="small" onClick={() => toggleStatus(user)}>{user.status === "active" ? "禁用" : "启用"}</Button>{user.verify_status === "pending" && <Button size="small" type="primary" onClick={() => setReviewing(user)}>审核认证</Button>}{user.role === "merchant" && <Button size="small" onClick={() => { setAssuring(user); assuranceForm.setFieldsValue({ quality_merchant: user.merchant_profile?.quality_merchant ?? false, guarantee_deposit_paid: user.merchant_profile?.guarantee_deposit_paid ?? false, guarantee_deposit_amount: Number(user.merchant_profile?.guarantee_deposit_amount ?? 0) }); }}>设置保障</Button>}</Space></div>
+      </div>)}
+    </div>
     <Table rowKey="id" loading={isLoading} dataSource={data?.items ?? []} pagination={false} columns={[
       { title: "来源", dataIndex: "registration_channel", render: (value) => value || "未填写" },
       { title: "用户", render: (_, user: AdminUser) => <div><strong>{user.nickname}</strong><div className="muted-text">{user.phone}</div></div> },
-      { title: "角色", dataIndex: "role", render: (value) => roleLabels[value] ?? value },
+      { title: "角色", dataIndex: "role", render: (value) => roleLabels[value] ?? "未知角色" },
       { title: "账号", dataIndex: "status", render: (value) => <Tag color={value === "active" ? "green" : "red"}>{value === "active" ? "正常" : "已禁用"}</Tag> },
-      { title: "认证", dataIndex: "verify_status", render: (value) => <Tag color={verifyLabels[value]?.color}>{verifyLabels[value]?.label ?? value}</Tag> },
+      { title: "认证", dataIndex: "verify_status", render: (value) => <Tag color={(verifyLabels[value] ?? verifyFallback).color}>{(verifyLabels[value] ?? verifyFallback).label}</Tag> },
       { title: "商家保障", render: (_, user: AdminUser) => user.role === "merchant" ? <Space wrap>{user.merchant_profile?.quality_merchant && <Tag color="green">优质商家</Tag>}{user.merchant_profile?.guarantee_deposit_paid && <Tag color="gold">保证金 ¥{user.merchant_profile.guarantee_deposit_amount}</Tag>}{!user.merchant_profile?.quality_merchant && !user.merchant_profile?.guarantee_deposit_paid && <Typography.Text type="secondary">未设置</Typography.Text>}</Space> : "-" },
       { title: "操作", render: (_, user: AdminUser) => <Space><Button size="small" onClick={() => toggleStatus(user)}>{user.status === "active" ? "禁用" : "启用"}</Button>{user.verify_status === "pending" && <Button size="small" type="primary" onClick={() => setReviewing(user)}>审核认证</Button>}{user.role === "merchant" && <Button size="small" onClick={() => { setAssuring(user); assuranceForm.setFieldsValue({ quality_merchant: user.merchant_profile?.quality_merchant ?? false, guarantee_deposit_paid: user.merchant_profile?.guarantee_deposit_paid ?? false, guarantee_deposit_amount: Number(user.merchant_profile?.guarantee_deposit_amount ?? 0) }); }}>设置保障</Button>}</Space> },
     ]} />

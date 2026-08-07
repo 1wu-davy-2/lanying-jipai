@@ -1,0 +1,55 @@
+/* 设计令牌：docs/ui-redesign/01-prd.md 4.2-4.4。
+   新颜色、字号、间距、圆角与层级必须来自本文件；不得在 JSX 中新增固定视觉内联样式。 */
+:root {
+  /* 色彩语义 */
+  --color-brand-600: #B33B5A;   /* 主按钮、当前导航、关键品牌文字 */
+  --color-brand-700: #8F2F48;   /* Hover、按下、深色品牌背景 */
+  --color-brand-050: #FFF0F3;   /* 轻量品牌提示、选中背景 */
+  --color-trust-600: #26756F;   /* 已认证、可申请、成功、可信保障 */
+  --color-trust-050: #EAF6F3;   /* 成功与信任弱背景 */
+  --color-money-700: #984B0C;   /* 佣金、补贴、可提现金额 */
+  --color-money-050: #FFF5E8;   /* 金额说明弱背景 */
+  --color-info-600: #3566B8;    /* 审核中、链接、信息状态 */
+  --color-warning-700: #8A5700; /* 待处理、需注意、修订要求 */
+  --color-danger-600: #B63B47;  /* 拒绝、争议、破坏性操作 */
+  --color-ink-900: #24212B;     /* 标题、关键正文 */
+  --color-ink-600: #6F6875;     /* 次要文字、时间、说明 */
+  --color-border: #E7E3EA;      /* 边框、分隔线、表头 */
+  --color-canvas: #F7F7FA;      /* 工作台画布 */
+  --color-surface: #FFFFFF;     /* 表单、列表、卡片、弹层 */
+
+  /* 字体栈（不依赖在线字体） */
+  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-size-page-title: 28px;   /* 桌面页面标题 */
+  --font-size-mobile-title: 24px; /* 手机页面标题 */
+  --font-size-section-title: 20px;
+  --font-size-card-title: 16px;
+  --font-size-body: 15px;
+  --font-size-aux: 13px;          /* 辅助文字 */
+  --font-size-caption: 12px;      /* 最小文字 */
+
+  /* 间距阶梯 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+
+  /* 圆角：控件 6px，卡片与弹层 8px；圆形仅用于头像、状态点和纯图标按钮 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  /* 阴影仅用于抽屉、弹层、固定导航和悬浮中的可点击卡片 */
+  --shadow-float: 0 8px 18px rgba(36, 33, 43, .08);
+
+  /* 壳层尺寸 */
+  --sider-width: 232px;
+  --sider-width-1024: 216px;
+  --header-height: 64px;
+  --mobile-header-height: 56px;
+  --mobile-nav-height: 64px;
+  --content-max-width: 1200px;
+}

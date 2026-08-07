@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileImageOutlined } from "@ant-design/icons";
 import { Avatar, Button, Card, Input, List, Modal, Pagination, Select, Space, Tag, Typography, message } from "antd";
 
 import { getAdminOrderApplications, reviewOrderApplication, type AdminOrderApplication } from "../../api/admin";
@@ -60,7 +61,7 @@ export function AdminApplicationsPage() {
   };
 
   return <div>
-    <div className="page-heading"><Typography.Title level={2}>接单申请</Typography.Title></div>
+    <div className="page-heading"><div><Typography.Title level={2}>接单申请</Typography.Title><Typography.Text type="secondary">按订单分组审核达人申请并分配名额。</Typography.Text></div></div>
     <Space className="filter-bar"><Select value={status} allowClear placeholder="全部申请状态" onChange={(value) => { setStatus(value); setPage(1); }} options={(Object.keys(statusText) as ApplicationStatus[]).map((value) => ({ value, label: statusText[value] }))} /></Space>
     {isLoading ? <Card loading /> : groups.length ? <div className="admin-application-groups">{groups.map(({ order, items }) => {
       const approvedInPage = items.filter((item) => item.status === "APPROVED").length;
@@ -71,6 +72,7 @@ export function AdminApplicationsPage() {
         <List dataSource={items} renderItem={(item) => <List.Item actions={[item.status === "PENDING" ? <Space key="review" direction="vertical" size={0} align="end"><Button type="primary" size="small" disabled={Boolean(blockedReason)} onClick={() => setSelected(item)}>审核</Button>{blockedReason && <Typography.Text type="secondary">{blockedReason}</Typography.Text>}</Space> : <Typography.Text key="review" type="secondary">{item.review_reason || statusText[item.status]}</Typography.Text>]}>
           <List.Item.Meta avatar={<Avatar src={item.applicant?.avatar_url}>{item.applicant?.nickname?.slice(0, 1)}</Avatar>} title={<Space><span>{item.applicant?.nickname || "未知达人"}</span>{item.applicant?.level && <Tag>{item.applicant.level}</Tag>}<Tag color={statusColor[item.status]}>{statusText[item.status]}</Tag></Space>} description={<span>{item.applicant?.verify_status === "verified" ? "已实名" : "未实名"} · 申请于 {item.created_at ? new Date(item.created_at).toLocaleString() : "-"}</span>} />
           <div className="admin-application-message">{item.message || "未填写申请说明"}</div>
+          {Boolean(item.owned_product_images?.length) && <Typography.Text type="secondary"><FileImageOutlined /> 已上传 {item.owned_product_images.length} 张同款实拍图</Typography.Text>}
         </List.Item>} />
       </Card>;
     })}</div> : <Card><Typography.Text type="secondary">暂无符合条件的申请</Typography.Text></Card>}

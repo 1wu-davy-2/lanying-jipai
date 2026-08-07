@@ -1,0 +1,109 @@
+/* 达人订单列表、新履约详情与旧订单详情 */
+.model-orders-heading { margin-bottom: 14px; }
+.model-orders-heading h2.ant-typography { margin-bottom: 4px; }
+.model-order-detail-next-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-brand-600);
+  background: var(--color-canvas);
+}
+.model-order-detail-next-action span { color: var(--color-ink-600); font-size: 13px; }
+.model-order-detail-next-action strong { color: var(--color-ink-900); }
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr);
+  gap: 18px;
+  align-items: start;
+}
+.order-detail-grid .ant-card { height: 100%; }
+.model-mobile-order-list { display: none; }
+
+/* 履约详情：当前阶段 */
+.fulfillment-stage-card { margin-bottom: 18px; }
+.fulfillment-stage-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.fulfillment-stage-copy { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.fulfillment-stage-status { color: var(--color-ink-900); font-size: 18px; font-weight: 700; }
+.fulfillment-stage-next { color: var(--color-ink-900); font-size: 14px; }
+.fulfillment-stage-condition { color: var(--color-ink-600); font-size: 13px; line-height: 1.5; }
+.fulfillment-stage-facts { display: grid; gap: 4px; text-align: right; color: var(--color-ink-600); font-size: 13px; }
+.fulfillment-stage-facts b { color: var(--color-money-700); font-variant-numeric: tabular-nums; }
+.fulfillment-submit-box { display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.fulfillment-submit-box .ant-alert { margin: 0; }
+
+/* 履约详情：交付素材 4:3 缩略图与类型标注 */
+.fulfillment-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; margin-top: 10px; }
+.fulfillment-media-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink-900);
+}
+.fulfillment-media-thumb img, .fulfillment-media-thumb video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fulfillment-media-type {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(36, 33, 43, .72);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+}
+.fulfillment-version-list { display: grid; gap: 14px; }
+.fulfillment-version + .fulfillment-version { padding-top: 14px; border-top: 1px dashed var(--color-border); }
+.fulfillment-version-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fulfillment-version-heading strong { color: var(--color-ink-900); font-size: 13px; }
+.fulfillment-version--latest .fulfillment-version-heading strong { color: var(--color-trust-600); }
+.fulfillment-version-feedback { margin: 8px 0 0 !important; font-size: 13px; }
+
+/* 旧订单详情媒体缩略图 */
+.order-media-thumb { width: 88px; height: 88px; object-fit: cover; background: var(--color-ink-900); border-radius: var(--radius-sm); }
+
+@media (max-width: 767px) {
+  .model-orders-table { display: none; }
+  .model-mobile-order-list { display: grid; gap: 10px; }
+  .model-mobile-order {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-ink-900);
+    text-align: left;
+  }
+  .model-mobile-order:active { border-color: var(--color-brand-600); background: var(--color-brand-050); }
+  .model-mobile-order-heading, .model-mobile-order-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .model-mobile-order-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .model-mobile-order-number { color: var(--color-ink-600); font-size: 12px; }
+  .model-mobile-order-footer { color: var(--color-ink-600); font-size: 13px; }
+  .model-mobile-order-footer b { color: var(--color-money-700); font-size: 17px; font-variant-numeric: tabular-nums; }
+  .model-mobile-order-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-ink-600);
+    font-size: 12px;
+  }
+  .model-mobile-order-progress strong { color: var(--color-ink-900); font-size: 13px; }
+  .order-detail-grid { grid-template-columns: 1fr; }
+  .order-detail .page-heading { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .order-detail .page-heading h2.ant-typography { font-size: 22px; line-height: 30px; }
+  .fulfillment-stage-facts { text-align: left; }
+}

@@ -7,7 +7,10 @@ import { addressFromPath, addressToPath } from "../constants/shippingAddresses";
 import { getCurrentUser, saveCurrentUser, saveMerchantProfile, saveModelProfile, submitVerification } from "../api/users";
 import { getTalentStatus } from "../api/users";
 import type { UserRole } from "../types";
-import { TalentProfileFields } from "../components/TalentProfileFields";
+import { TalentProfileFields, VerificationFields } from "../components/TalentProfileFields";
+
+// 作品图加载失败时的中性占位（本地数据 URI，不依赖运行时网络）。
+const IMAGE_FALLBACK = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#F7F7FA"/><path d="M32 104l32-40 24 28 16-16 24 28z" fill="#E7E3EA"/></svg>');
 
 export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "model"> }) {
   const queryClient = useQueryClient();
@@ -75,10 +78,7 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
     {data?.verify_status === "pending" ? <Alert type="info" showIcon message="实名认证审核中" description="审核通过后即可正式接单。" /> : <>
       {data?.verify_status === "rejected" && <Alert type="error" showIcon message="认证被驳回" description={data.verify_reject_reason || "请核对资料后重新提交"} />}
       {data?.verify_status !== "verified" && <Form layout="vertical" onFinish={verify} requiredMark={false}>
-        <Form.Item name="real_name" label="真实姓名" rules={[{ required: true, message: "请输入真实姓名" }]}><Input /></Form.Item>
-        <Form.Item name="id_card_no" label="身份证号" rules={[{ required: true, message: "请输入身份证号" }]}><Input /></Form.Item>
-        <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input /></Form.Item>
-        <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
+        <VerificationFields />
         <Button htmlType="submit" loading={saving}>提交认证</Button>
       </Form>}
       {data?.verify_status === "verified" && <Alert type="success" showIcon message="已完成实名认证" description="你的资料已满足接单认证要求。" />}
@@ -96,7 +96,7 @@ export function ProfilePage({ role }: { role: Extract<UserRole, "merchant" | "mo
           </div>
           <section className="talent-profile-section"><Typography.Title level={4}>接单能力</Typography.Title><div className="talent-profile-stats"><div><strong>{talentStatus?.completed_orders ?? 0}</strong><span>已完成订单</span></div><div><strong>{talentStatus?.active_orders ?? 0}</strong><span>进行中订单</span></div><div><strong>¥{talentStatus?.level.max_commission_amount ?? "300"}</strong><span>单笔接单上限</span></div></div><Descriptions column={{ xs: 1, sm: 2 }} size="small" styles={{ label: { color: "#718083" } }}><Descriptions.Item label="身高 / 体重">{data.model_profile?.height_cm || "-"} cm / {data.model_profile?.weight_kg || "-"} kg</Descriptions.Item><Descriptions.Item label="擅长标签">{data.model_profile?.skill_tags || "未填写"}</Descriptions.Item></Descriptions></section>
           <section className="talent-profile-section talent-profile-contact"><Typography.Title level={4}>收件信息</Typography.Title><Typography.Text type="secondary">已配置收货信息，接单后将用于商家寄送样品。</Typography.Text><Button type="link" onClick={() => setEditing(true)}>维护收件信息</Button></section>
-          <section className="talent-profile-portfolio"><Typography.Title level={4}>作品集</Typography.Title><Image.PreviewGroup>{(data.model_profile?.portfolio_urls ?? []).map((url) => <Image key={url} src={url} alt="达人作品" />)}</Image.PreviewGroup></section>
+          <section className="talent-profile-portfolio"><Typography.Title level={4}>作品集</Typography.Title><Image.PreviewGroup>{(data.model_profile?.portfolio_urls ?? []).map((url) => <Image key={url} src={url} alt="达人作品" fallback={IMAGE_FALLBACK} />)}</Image.PreviewGroup></section>
         </section>
       </Col>
       <Col xs={24} lg={9}>{verificationPanel}</Col>

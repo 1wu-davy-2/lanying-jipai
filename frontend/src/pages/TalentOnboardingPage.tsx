@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { addressFromPath, addressToPath } from "../constants/shippingAddresses";
 import { getCurrentUser, saveCurrentUser, saveModelProfile, submitVerification } from "../api/users";
-import { TalentProfileFields } from "../components/TalentProfileFields";
+import { TalentProfileFields, VerificationFields } from "../components/TalentProfileFields";
 
 type TalentProfileValues = {
   nickname: string;
@@ -79,7 +79,7 @@ export function TalentOnboardingPage() {
 
   if (isLoading) return <Skeleton active />;
   if (data?.verify_status === "verified") {
-    return <Result status="success" title="达人认证已通过" subTitle="你的账号已可以正式接单。" extra={<Button type="primary" onClick={() => navigate("/model/hall")}>进入抢单大厅</Button>} />;
+    return <Result status="success" title="达人认证已通过" subTitle="你的账号已可以正式接单。" extra={<Button type="primary" onClick={() => navigate("/model/hall")}>进入订单大厅</Button>} />;
   }
 
   return <section className="talent-onboarding">
@@ -89,10 +89,7 @@ export function TalentOnboardingPage() {
       {verificationStep ? <>
         {data?.verify_status === "rejected" && <Alert type="error" showIcon message="认证被驳回" description={data.verify_reject_reason || "请核对资料后重新提交"} />}
         {data?.verify_status === "pending" ? <Result status="info" title="实名认证审核中" subTitle="管理员审核通过后，账号将自动获得正式接单资格。" extra={<Button onClick={() => navigate("/model/hall")}>返回大厅</Button>} /> : <Form layout="vertical" onFinish={submitVerify} requiredMark={false}>
-          <Form.Item name="real_name" label="真实姓名" rules={[{ required: true, message: "请输入真实姓名" }]}><Input /></Form.Item>
-          <Form.Item name="id_card_no" label="身份证号" rules={[{ required: true, message: "请输入身份证号" }]}><Input /></Form.Item>
-          <Form.Item name="alipay_account" label="支付宝账号" rules={[{ required: true, message: "请输入支付宝账号" }]}><Input /></Form.Item>
-          <Form.Item name="alipay_real_name" label="支付宝实名" rules={[{ required: true, message: "请输入支付宝实名" }]}><Input /></Form.Item>
+          <VerificationFields />
           <Button type="primary" htmlType="submit" loading={saving}>提交实名认证</Button>
         </Form>}
       </> : <Form key={data?.id ?? "onboarding-profile"} initialValues={profileInitialValues} layout="vertical" onFinish={saveProfile} requiredMark={false}>

@@ -1,0 +1,68 @@
+/* 壳层响应式：小于 768px 隐藏固定侧栏，达人进入底部导航，商家/管理端使用抽屉导航。
+   各页面专属断点写入各自页面样式模块末尾。 */
+@media (max-width: 767px) {
+  .workspace-sider { display: none !important; }
+  .workspace-header { display: none; }
+  .workspace-mobile-header {
+    display: flex;
+    height: 56px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .workspace-mobile-header .workspace-mobile-logo { flex: 0 0 auto; }
+  .workspace-mobile-header .workspace-user {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: var(--color-ink-600);
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .workspace-mobile-header .ant-btn { min-width: 44px; height: 44px; }
+  .workspace-content { padding: 16px; }
+  .talent-workspace-shell .workspace-content { padding: 16px 16px calc(88px + env(safe-area-inset-bottom)); }
+
+  /* 达人底部导航：64px + 安全区，图标 22px，文字 12px，触控区至少 44px */
+  .talent-mobile-nav {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: 64px;
+    padding: 4px 8px env(safe-area-inset-bottom);
+    background: rgba(255, 255, 255, .98);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 14px rgba(36, 33, 43, .08);
+  }
+  .talent-mobile-nav button {
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink-600);
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .talent-mobile-nav button .anticon { font-size: 22px; }
+  .talent-mobile-nav button.active { color: var(--color-brand-600); font-weight: 700; }
+
+  /* 商家/管理端抽屉导航 */
+  .workspace-drawer .ant-drawer-body { padding: 12px 8px; }
+  .workspace-drawer .ant-menu { border-inline-end: 0; }
+  .workspace-drawer .ant-menu-item { height: 44px; line-height: 44px; margin-block: 4px; border-radius: var(--radius-sm); }
+  .workspace-drawer .ant-menu-item-selected { background: var(--color-brand-050) !important; color: var(--color-brand-600) !important; }
+  .workspace-drawer .ant-menu-item-group-title { padding: 16px 12px 6px; color: var(--color-ink-600); font-size: 12px; line-height: 18px; }
+  .workspace-drawer .ant-btn { min-width: 44px; height: 44px; }
+}

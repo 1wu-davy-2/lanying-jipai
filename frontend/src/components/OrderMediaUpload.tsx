@@ -134,8 +134,8 @@ export function OrderMediaUpload({ value, onChange, accept, maxCount = 9 }: Orde
     </Upload>
     <Modal open={Boolean(previewUrl)} title={previewFile && isVideoFile(previewFile) ? "视频预览" : "图片预览"} footer={null} onCancel={() => setPreviewFile(undefined)} destroyOnHidden>
       {previewUrl && (previewFile && isVideoFile(previewFile)
-        ? <video controls autoPlay src={previewUrl} style={{ display: "block", maxWidth: "100%", width: "100%" }} />
-        : <img src={previewUrl} alt="素材预览" style={{ display: "block", maxWidth: "100%", width: "100%" }} />)}
+        ? <video controls autoPlay src={previewUrl} className="order-media-preview" />
+        : <img src={previewUrl} alt="素材预览" className="order-media-preview" />)}
     </Modal>
   </>;
 }

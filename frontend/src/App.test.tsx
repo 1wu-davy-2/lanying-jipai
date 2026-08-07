@@ -24,7 +24,7 @@ describe("App", () => {
   it("opens the talent and management entry at the root route", () => {
     renderWithProviders("/");
 
-    expect(screen.getByRole("heading", { name: /选择工作台/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /进入蓝鹰寄拍/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /运营管理端/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /达人端/ })).toBeInTheDocument();
   });
